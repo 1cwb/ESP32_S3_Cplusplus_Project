@@ -5,12 +5,19 @@
 #include "freertos/queue.h"
 #include "esp_log.h"
 #include "driver/pulse_cnt.h"
+#include <functional>
 #include <list>
+
+struct stEncoderData
+{
+    pcnt_watch_event_data_t *edata;
+    pcnt_unit_handle_t phandle;
+};
 
 class MPcntUnit
 {
 public:
-    MPcntUnit(int32_t highLimit = 100, int32_t lowLimit = -100) : pcntHanlde_(nullptr)
+    MPcntUnit(int32_t highLimit = 1000, int32_t lowLimit = -1000) : pcntHanlde_(nullptr)
     {
         init(highLimit, lowLimit);
     }
@@ -22,7 +29,7 @@ public:
     MPcntUnit(MPcntUnit&&) = delete;
     MPcntUnit& operator=(const MPcntUnit& ) = delete;
     MPcntUnit& operator=(MPcntUnit&& ) = delete;
-    bool pcntEnable()
+    bool enable()
     {
         if(!pcntHanlde_)
         {
@@ -36,7 +43,7 @@ public:
         }
         return true;
     }
-    bool pcntDisable()
+    bool disable()
     {
         if(!pcntHanlde_)
         {
@@ -50,7 +57,7 @@ public:
         }
         return true;
     }
-    bool pcntStart()
+    bool start()
     {
         if(!pcntHanlde_)
         {
@@ -64,7 +71,7 @@ public:
         }
         return true;
     }
-    bool pcntStop()
+    bool stop()
     {
         if(!pcntHanlde_)
         {
@@ -77,6 +84,14 @@ public:
             return false;
         }
         return true;
+    }
+    int32_t getHighLimit() const
+    {
+        return pcntUnitConfig_.high_limit;
+    }
+    int32_t getLowLimit() const
+    {
+        return pcntUnitConfig_.low_limit;
     }
     bool clearCount()
     {
@@ -106,11 +121,17 @@ public:
         }
         return true;
     }
+    int getCount()
+    {
+        int val = 0;
+        getCount(&val);
+        return val;
+    }
     pcnt_unit_handle_t getPcntUnitHand()
     {
         return pcntHanlde_;
     }
-    bool unitAddWatchPoint(int32_t watchPoint)
+    bool AddWatchPoint(int32_t watchPoint)
     {
         if(!pcntHanlde_)
         {
@@ -124,7 +145,7 @@ public:
         }
         return true;
     }
-    bool unitRemoveWatchPoint(int32_t watchPoint)
+    bool RemoveWatchPoint(int32_t watchPoint)
     {
         if(!pcntHanlde_)
         {
@@ -139,7 +160,7 @@ public:
         return true;
     }
     //观察点中断回调highLimit and lowLimit
-    bool unitRegisterEventCb(const pcnt_event_callbacks_t *cbs, void *user_data)
+    bool RegisterEventCb(const pcnt_event_callbacks_t *cbs, void *user_data)
     {
         if(!pcntHanlde_)
         {
@@ -201,6 +222,39 @@ private:
             return false;
         }
         pcntUnitCount_++;
+        pcnt_watch_cb_t onReach = [](pcnt_unit_handle_t unit, const pcnt_watch_event_data_t *edata, void *user_ctx)->bool{
+            stEncoderData* ecData = static_cast<stEncoderData*>(malloc(sizeof(stEncoderData)));
+            ecData->edata = static_cast<pcnt_watch_event_data_t *>(malloc(sizeof(pcnt_watch_event_data_t)));
+            ecData->phandle = unit;
+            memcpy(ecData->edata, edata, sizeof(pcnt_watch_event_data_t));
+            BaseType_t xTaskWokenByReceive = pdFALSE;
+            stMsgData encoder;
+            encoder.eventId = E_EVENT_ID_ENCODER;
+            encoder.dataLen = 4;
+            encoder.data = reinterpret_cast<uint8_t*>(ecData);
+            encoder.clean = [&](){
+                if(ecData)
+                {
+                    printf("clean encoder now\n");
+                    if(ecData->edata)
+                    {
+                        free(ecData->edata);
+                        ecData->edata = nullptr;
+                    }
+                    free(ecData);
+                    ecData = nullptr;
+                }
+            };
+            xQueueSendFromISR(MeventHandler::getINstance()->getQueueHandle(), &encoder, &xTaskWokenByReceive);
+            return true;
+        };
+        const pcnt_event_callbacks_t cbs = {onReach};
+        err = pcnt_unit_register_event_callbacks(pcntHanlde_, &cbs, nullptr);
+        if(err != ESP_OK)
+        {
+            printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
+            return false;
+        }
         return true;
     }
     bool deinit()
@@ -316,70 +370,126 @@ private:
     pcnt_channel_handle_t pcntChHandle_;
     pcnt_chan_config_t pcntChConfig_;
 };
-/*
-class MPcnt
+
+class Mencoder
 {
 public:
-    MPcnt() : pcntHanlde_(nullptr), pcntChHandle_(nullptr)
+    Mencoder():unit(new MPcntUnit),cha(new MPcntChannel(unit)),chb(new MPcntChannel(unit))
     {
-
+        //unit.RegisterEventCb();
     }
-    ~MPcnt()
+    bool init(int32_t gpioa, int32_t gpiob, const uint32_t glitchNS = 1000)
     {
+        unit->setGlitchFilter(glitchNS);
+        cha->init(gpioa,gpiob);
+        chb->init(gpiob,gpioa);
+        
+        cha->setEdgeAction(PCNT_CHANNEL_EDGE_ACTION_DECREASE, PCNT_CHANNEL_EDGE_ACTION_INCREASE);
+        chb->setEdgeAction(PCNT_CHANNEL_EDGE_ACTION_INCREASE, PCNT_CHANNEL_EDGE_ACTION_DECREASE);
 
+        cha->setLevelAction(PCNT_CHANNEL_LEVEL_ACTION_KEEP, PCNT_CHANNEL_LEVEL_ACTION_INVERSE);
+        chb->setLevelAction(PCNT_CHANNEL_LEVEL_ACTION_KEEP, PCNT_CHANNEL_LEVEL_ACTION_INVERSE);
+        return true;
     }
-    MPcnt(const MPcnt&) = delete;
-    MPcnt(MPcnt&&) = delete;
-    MPcnt& operator=(const MPcnt& ) = delete;
-    MPcnt& operator=(MPcnt&& ) = delete;
-
-    bool pcntInit(int32_t edgeGpioNum = -1, int32_t levelGpioNum = -1, int32_t highLimit = 100, int32_t lowLimit = -100,
-                    bool invertEdgeInput = false, bool invertLevelInput = false, uint8_t virtEdgeIoLevel = 0, uint8_t virtLevelIoLevel = 0)
+    bool addWatchPoint(int32_t watch_points[], uint16_t size)
     {
-        pcntUnitConfig_.high_limit = highLimit;
-        pcntUnitConfig_.low_limit = lowLimit;
-
-        esp_err_t err = pcnt_new_unit(&pcntUnitConfig_, &pcntHanlde_);
-        if(err != ESP_OK)
+        for(uint16_t s = 0; s < size; s++)
         {
-            printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
-            return false;
+            if(!unit->AddWatchPoint(watch_points[s]))
+            {
+                return false;
+            }
         }
+        return true;
+    }
+    bool addWatchPoint(int32_t watchPoint)
+    {
 
-        pcntChConfig_.edge_gpio_num = edgeGpioNum; 
-        pcntChConfig_.level_gpio_num = levelGpioNum; 
-        pcntChConfig_.flags.invert_edge_input = invertEdgeInput;  
-        pcntChConfig_.flags.invert_level_input = invertLevelInput;  
-        pcntChConfig_.flags.virt_edge_io_level = virtEdgeIoLevel;  
-        pcntChConfig_.flags.virt_level_io_level = virtLevelIoLevel; 
-        pcntChConfig_.flags.io_loop_back = 0;
-
-        err = pcnt_new_channel(pcntHanlde_, &pcntChConfig_, &pcntChHandle_);
-        if(err != ESP_OK)
+        if(!unit->AddWatchPoint(watchPoint))
         {
-            printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
             return false;
         }
         return true;
     }
-    bool pcntDeInit()
+    bool start()
     {
-        esp_err_t err;
-        if(pcntHanlde_)
+        unit->enable();
+        unit->clearCount();
+        unit->start();
+        return true;
+    }
+    bool stop()
+    {
+        unit->clearCount();
+        unit->stop();
+        unit->disable();
+        return true;
+    }
+    ~Mencoder()
+    {
+        if(cha)
         {
-            err =  pcnt_unit_disable(pcntHanlde_);
-            if(err != ESP_OK)
-            {
-                printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
-                return false;
-            }
+            delete cha;
         }
-        if()
+        if(chb)
+        {
+            delete chb;
+        }
+        if(unit)
+        {
+            unit->stop();
+            unit->disable();
+            delete unit;
+        }
+    }
+    Mencoder(const Mencoder&) = delete;
+    Mencoder(Mencoder&&) = delete;
+    Mencoder& operator=(const Mencoder& ) = delete;
+    Mencoder& operator=(Mencoder&& ) = delete;
+    MPcntUnit* getUnit()
+    {
+        return unit;
     }
 private:
-    pcnt_unit_handle_t pcntHanlde_;
-    pcnt_channel_handle_t pcntChHandle_;
-    pcnt_unit_config_t pcntUnitConfig_;
-    pcnt_chan_config_t pcntChConfig_;
+    MPcntUnit* unit;
+    MPcntChannel* cha;
+    MPcntChannel* chb;
 };
-*/
+
+class MEncoderParse : public eventClient
+{
+    using EncoderCb = std::function<void(pcnt_unit_handle_t, pcnt_watch_event_data_t*)>;
+public:
+    MEncoderParse()
+    {
+        enableEvent(E_EVENT_ID_ENCODER);
+        MeventHandler::getINstance()->registerClient(this);
+    }
+    virtual ~MEncoderParse()
+    {
+        MeventHandler::getINstance()->unregisterClient(this);
+    }
+    virtual void onEvent(uint32_t eventId, uint8_t* data ,uint32_t dataLen)
+    {
+        if(!data)
+        {
+            return ;
+        }
+        if(eventId & E_EVENT_ID_ENCODER)
+        {
+            stEncoderData* pencoder = reinterpret_cast<stEncoderData*>(data);
+            pcnt_unit_handle_t mhandle = pencoder->phandle;
+            pcnt_watch_event_data_t *watchEvData = pencoder->edata;
+            if(encoderCb_)
+            {
+                encoderCb_(mhandle, watchEvData);
+            }
+        }
+    }
+    void setEncoderCb(const EncoderCb & cb)
+    {
+        encoderCb_ = cb;
+    }
+private:
+    EncoderCb encoderCb_;
+};

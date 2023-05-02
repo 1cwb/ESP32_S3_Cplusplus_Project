@@ -471,13 +471,32 @@ using namespace std;
 
 extern "C" void app_main(void)
 {
-    MPcntUnit pcntUnit;
-
     LedStrip ledstrip;
     ledstrip.init();
     ledstrip.setRGBAndUpdate(RGB_COLOR_BLACK);
     MButton button(GPIO_NUM_45);
     MButton buttonBoot(GPIO_NUM_0);
+
+    static Mencoder encoder1;
+    static Mencoder encoder2;
+    encoder1.init(6,7);
+    encoder2.init(41,42);
+    encoder1.addWatchPoint(-500);
+    encoder1.addWatchPoint(0);
+    encoder1.addWatchPoint(500);
+    encoder2.addWatchPoint(10);
+    encoder1.start();
+    encoder2.start();
+    MEncoderParse* encoderParse = new MEncoderParse;
+    encoderParse->setEncoderCb([&](pcnt_unit_handle_t handle, pcnt_watch_event_data_t* watchEvData){
+        printf("pcntunit Event happen:\n");
+        if(handle == encoder1.getUnit()->getPcntUnitHand())
+        {
+            printf("pcntunit1 Event happen:\n");
+            cout << "value = " << watchEvData->watch_point_value <<endl;
+            cout << "get value = " << encoder1.getUnit()->getCount() <<endl;
+        }
+    });
     MbuttonParse* buttonParseData = new MbuttonParse;
     MespNowDataParse* espnowData = new MespNowDataParse ;
     espnowData->enableEvent(E_EVENT_ID_BUTTON|E_EVENT_ID_ESP_NOW);
@@ -523,15 +542,19 @@ extern "C" void app_main(void)
         {
             case 1:
             ledstrip.setRGBAndUpdate(RGB_COLOR_RED);
+            printf("set rgb red\n");
             break;
             case 2:
             ledstrip.setRGBAndUpdate(RGB_COLOR_BLUE);
+            printf("set rgb blue\n");
             break;
             case 3:
             ledstrip.setRGBAndUpdate(RGB_COLOR_PURPLE);
+            printf("set rgb purb\n");
             break;
             default: 
                 sta = 0;
+                ledstrip.setRGBAndUpdate(RGB_COLOR_MAGENTA);
             break;
         }
         sta ++;
@@ -539,8 +562,13 @@ extern "C" void app_main(void)
     while(true)
     {
         vTaskDelay(2000/portTICK_PERIOD_MS);
+        //motor1.getUnit()->getCount(&c);
+       // motor2.getUnit()->getCount(&d);
+        //cout <<"c" << c << "d" << d <<  endl;
+
     }
     delete buttonParseData;
     delete espnowData;
+    delete encoderParse;
 }
 #endif

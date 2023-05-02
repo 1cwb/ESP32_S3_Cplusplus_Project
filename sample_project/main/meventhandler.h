@@ -24,6 +24,7 @@
 #define E_EVENT_ID_BUTTON   BIT(1)
 #define E_EVENT_ID_ESP_NOW  BIT(2)
 #define E_EVENT_ID_ESP_WIFI BIT(3)
+#define E_EVENT_ID_ENCODER  BIT(4)
 
 struct stMsgData
 {
