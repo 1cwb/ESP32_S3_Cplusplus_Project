@@ -467,7 +467,14 @@ extern "C" void app_main(void)
 #include "mespnow.h"
 #include <iostream>
 #include "mpcnt.h"
+#include "mmcpwm.h"
 using namespace std;
+
+#define BDC_MCPWM_TIMER_RESOLUTION_HZ 10000000 // 10MHz, 1 tick = 0.1us
+#define BDC_MCPWM_FREQ_HZ             25000    // 25KHz PWM
+#define BDC_MCPWM_DUTY_TICK_MAX       (BDC_MCPWM_TIMER_RESOLUTION_HZ / BDC_MCPWM_FREQ_HZ) // maximum value we can set for the duty cycle, in ticks
+#define BDC_MCPWM_GPIO_A              7
+#define BDC_MCPWM_GPIO_B              15
 
 extern "C" void app_main(void)
 {
@@ -477,7 +484,7 @@ extern "C" void app_main(void)
     MButton button(GPIO_NUM_45);
     MButton buttonBoot(GPIO_NUM_0);
 
-    static Mencoder encoder1;
+    /*static Mencoder encoder1;
     static Mencoder encoder2;
     encoder1.init(6,7);
     encoder2.init(41,42);
@@ -496,7 +503,12 @@ extern "C" void app_main(void)
             cout << "value = " << watchEvData->watch_point_value <<endl;
             cout << "get value = " << encoder1.getUnit()->getCount() <<endl;
         }
-    });
+    });*/
+    MMcpwm* motor1 = new MMcpwm;
+    motor1->init(0,GPIO_NUM_4,GPIO_NUM_5,BDC_MCPWM_FREQ_HZ,BDC_MCPWM_TIMER_RESOLUTION_HZ);
+    motor1->enable();
+    motor1->forward();
+    motor1->setSpeed(0xffff);
     MbuttonParse* buttonParseData = new MbuttonParse;
     MespNowDataParse* espnowData = new MespNowDataParse ;
     espnowData->enableEvent(E_EVENT_ID_BUTTON|E_EVENT_ID_ESP_NOW);
@@ -559,16 +571,19 @@ extern "C" void app_main(void)
         }
         sta ++;
     });
+    uint32_t speed = 0;
     while(true)
     {
         vTaskDelay(2000/portTICK_PERIOD_MS);
         //motor1.getUnit()->getCount(&c);
        // motor2.getUnit()->getCount(&d);
         //cout <<"c" << c << "d" << d <<  endl;
+        speed += 1000;
+        motor1->setSpeed(speed);
 
     }
     delete buttonParseData;
     delete espnowData;
-    delete encoderParse;
+    //delete encoderParse;
 }
 #endif
