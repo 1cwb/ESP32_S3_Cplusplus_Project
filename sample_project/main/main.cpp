@@ -467,7 +467,7 @@ extern "C" void app_main(void)
 #include "mespnow.h"
 #include <iostream>
 #include "mpcnt.h"
-#include "mmcpwm.h"
+#include "motor.h"
 using namespace std;
 
 #define BDC_MCPWM_TIMER_RESOLUTION_HZ 10000000 // 10MHz, 1 tick = 0.1us
@@ -504,15 +504,22 @@ extern "C" void app_main(void)
             cout << "get value = " << encoder1.getUnit()->getCount() <<endl;
         }
     });*/
-    MMcpwm* motor1 = new MMcpwm;
+    uint32_t speed = (BDC_MCPWM_TIMER_RESOLUTION_HZ / BDC_MCPWM_FREQ_HZ);
+    printf("speed = %lu\n",speed);
+    Motor *motor = new Motor(0,BDC_MCPWM_FREQ_HZ, BDC_MCPWM_TIMER_RESOLUTION_HZ, GPIO_NUM_4,GPIO_NUM_5);
+    motor->enable();
+    motor->forward();
+    motor->setSpeed(400);
+    /*MMcpwm* motor1 = new MMcpwm;
     motor1->init(0,GPIO_NUM_4,GPIO_NUM_5,BDC_MCPWM_FREQ_HZ,BDC_MCPWM_TIMER_RESOLUTION_HZ);
     motor1->enable();
     motor1->forward();
-    motor1->setSpeed(0xffff);
+    motor1->setSpeed(speed);
+    */
     MbuttonParse* buttonParseData = new MbuttonParse;
     MespNowDataParse* espnowData = new MespNowDataParse ;
     espnowData->enableEvent(E_EVENT_ID_BUTTON|E_EVENT_ID_ESP_NOW);
-
+    
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
@@ -527,18 +534,29 @@ extern "C" void app_main(void)
     {
         static uint8_t sta = 1;
         cout << "buttonNum = " << buttonNum << endl;
-        cout << "data len = " << len << endl;
+        //cout << "data len = " << len << endl;
         const uint8_t buff[] = "hellow world";
+        if(motor->isEnable())
+        {
+            motor->brake();
+            motor->disable();
+            cout << "disable motor" << endl;
+        }
+        else
+        {
+            motor->forward();
+            motor->enable();
+            cout << "enable motor" << endl;
+        }
         switch(sta)
         {
             case 1:
+            
             //ledstrip.setRGBAndUpdate(RGB_COLOR_RED);
             break;
             case 2:
+    
             //ledstrip.setRGBAndUpdate(RGB_COLOR_BLUE);
-            break;
-            case 3:
-            //ledstrip.setRGBAndUpdate(RGB_COLOR_PURPLE);
             break;
             default: 
                 sta = 0;
@@ -571,19 +589,20 @@ extern "C" void app_main(void)
         }
         sta ++;
     });
-    uint32_t speed = 0;
+
     while(true)
     {
-        vTaskDelay(2000/portTICK_PERIOD_MS);
+        vTaskDelay(10000/portTICK_PERIOD_MS);
         //motor1.getUnit()->getCount(&c);
        // motor2.getUnit()->getCount(&d);
         //cout <<"c" << c << "d" << d <<  endl;
-        speed += 1000;
-        motor1->setSpeed(speed);
-
+        //motor->forward();
+        //vTaskDelay(10000/portTICK_PERIOD_MS);
+        //motor->reverse();
     }
     delete buttonParseData;
     delete espnowData;
     //delete encoderParse;
+    delete motor;
 }
 #endif
