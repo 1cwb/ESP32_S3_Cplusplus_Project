@@ -480,9 +480,6 @@ extern "C" void app_main(void)
     LedStrip ledstrip;
     ledstrip.init();
     ledstrip.setRGBAndUpdate(RGB_COLOR_BLACK);
- 
-    stMotorCmd motorCmd(E_MOTOR_CMD_FORWARD, 200);
-    stBaseCmd cmd(E_ESP_CMD_ID_MOTOR_CTRL, &motorCmd, sizeof(stMotorCmd));
 
     MButton button(GPIO_NUM_45);
     MButton buttonBoot(GPIO_NUM_0);
@@ -508,7 +505,7 @@ extern "C" void app_main(void)
     Motor *motor = new Motor(0,BDC_MCPWM_FREQ_HZ, BDC_MCPWM_TIMER_RESOLUTION_HZ, GPIO_NUM_4,GPIO_NUM_5);
     motor->enable();
     motor->forward();
-    motor->setSpeed(speed);
+    motor->setSpeed(0);
 
     MbuttonParse* buttonParseData = new MbuttonParse;
     MespNowDataParse* espnowData = new MespNowDataParse ;
@@ -564,32 +561,55 @@ extern "C" void app_main(void)
     });
     espnowData->setDataParseRecvCb([&](stMespNowEventRecv* recv,bool isbroadCast){
         stBaseCmd* mcmd = reinterpret_cast<stBaseCmd*>(recv->data);
+        stMotorStatus status;
+        stBaseCmd cmd;
         if(mcmd->eid == E_ESP_CMD_ID_MOTOR_CTRL)
         {
-            printf("mcmd->eid\n");
+            switch (mcmd->udata.motorCmd.ecmd)
+            {
+                case E_MOTOR_CMD_COAST:
+                    motor->coast();
+                    motor->setSpeed(mcmd->udata.motorCmd.uspeed);
+                    ledstrip.setRGBAndUpdate(RGB_COLOR_BLACK);
+                    status.setStatus(E_MOTOR_CMD_COAST, mcmd->udata.motorCmd.uspeed);
+                    cmd.setData(E_ESP_CMD_ID_MOTOR_STATUS, reinterpret_cast<void*>(&status), sizeof(stMotorStatus));
+                    break;
+                case E_MOTOR_CMD_FORWARD:
+                    motor->forward();
+                    motor->setSpeed(mcmd->udata.motorCmd.uspeed);
+                    ledstrip.setRGBAndUpdate(RGB_COLOR_GREEN);
+                    status.setStatus(E_MOTOR_CMD_FORWARD, mcmd->udata.motorCmd.uspeed);
+                    cmd.setData(E_ESP_CMD_ID_MOTOR_STATUS, reinterpret_cast<void*>(&status), sizeof(stMotorStatus));
+                    break;
+                case E_MOTOR_CMD_REVERSE:
+                    motor->reverse();
+                    motor->setSpeed(mcmd->udata.motorCmd.uspeed);
+                    ledstrip.setRGBAndUpdate(RGB_COLOR_BLUE);
+                    status.setStatus(E_MOTOR_CMD_REVERSE, mcmd->udata.motorCmd.uspeed);
+                    cmd.setData(E_ESP_CMD_ID_MOTOR_STATUS, reinterpret_cast<void*>(&status), sizeof(stMotorStatus));
+                    break;
+                case E_MOTOR_CMD_BRAKE:
+                    motor->brake();
+                    motor->setSpeed(mcmd->udata.motorCmd.uspeed);
+                    status.setStatus(E_MOTOR_CMD_BRAKE, mcmd->udata.motorCmd.uspeed);
+                    cmd.setData(E_ESP_CMD_ID_MOTOR_STATUS, reinterpret_cast<void*>(&status), sizeof(stMotorStatus));
+                    break;
+                case E_MOTOR_CMD_SET_SPEED:
+                    motor->setSpeed(mcmd->udata.motorCmd.uspeed);
+                    status.setStatus(E_MOTOR_CMD_SET_SPEED, mcmd->udata.motorCmd.uspeed);
+                    cmd.setData(E_ESP_CMD_ID_MOTOR_STATUS, reinterpret_cast<void*>(&status), sizeof(stMotorStatus));
+                    break;
+                default:
+                    break;
+            }
+            espnow->sendBroadCastToGetAllDevice(reinterpret_cast<uint8_t*>(&cmd), sizeof(stBaseCmd));
         }
-
-        static uint8_t sta = 1;
-        switch(sta)
+        else if(mcmd->eid == E_ESP_CMD_ID_SEND_STR)
         {
-            case 1:
-            ledstrip.setRGBAndUpdate(RGB_COLOR_RED);
-            printf("set rgb red\n");
-            break;
-            case 2:
-            ledstrip.setRGBAndUpdate(RGB_COLOR_BLUE);
-            printf("set rgb blue\n");
-            break;
-            case 3:
-            ledstrip.setRGBAndUpdate(RGB_COLOR_PURPLE);
-            printf("set rgb purb\n");
-            break;
-            default: 
-                sta = 0;
-                ledstrip.setRGBAndUpdate(RGB_COLOR_MAGENTA);
-            break;
+            char data[128] = {0};
+            memcpy(data, mcmd->udata.buf, mcmd->dataLen);
+            printf("recv str : %s, mcmd->dataLen = %u\n",data,mcmd->dataLen);
         }
-        sta ++;
     });
 
     while(true)
