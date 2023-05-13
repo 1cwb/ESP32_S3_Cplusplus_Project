@@ -468,54 +468,48 @@ extern "C" void app_main(void)
 #include <iostream>
 #include "mpcnt.h"
 #include "motor.h"
+#include "mespcmd.h"
 using namespace std;
 
 #define BDC_MCPWM_TIMER_RESOLUTION_HZ 10000000 // 10MHz, 1 tick = 0.1us
-#define BDC_MCPWM_FREQ_HZ             25000    // 25KHz PWM
+#define BDC_MCPWM_FREQ_HZ             50000    // 25KHz PWM
 #define BDC_MCPWM_DUTY_TICK_MAX       (BDC_MCPWM_TIMER_RESOLUTION_HZ / BDC_MCPWM_FREQ_HZ) // maximum value we can set for the duty cycle, in ticks
-#define BDC_MCPWM_GPIO_A              7
-#define BDC_MCPWM_GPIO_B              15
 
 extern "C" void app_main(void)
 {
     LedStrip ledstrip;
     ledstrip.init();
     ledstrip.setRGBAndUpdate(RGB_COLOR_BLACK);
+ 
+    stMotorCmd motorCmd(E_MOTOR_CMD_FORWARD, 200);
+    stBaseCmd cmd(E_ESP_CMD_ID_MOTOR_CTRL, &motorCmd, sizeof(stMotorCmd));
+
     MButton button(GPIO_NUM_45);
     MButton buttonBoot(GPIO_NUM_0);
 
-    /*static Mencoder encoder1;
-    static Mencoder encoder2;
-    encoder1.init(6,7);
-    encoder2.init(41,42);
-    encoder1.addWatchPoint(-500);
-    encoder1.addWatchPoint(0);
-    encoder1.addWatchPoint(500);
-    encoder2.addWatchPoint(10);
-    encoder1.start();
-    encoder2.start();
+    Mencoder* encoder1 = new Mencoder;
+    encoder1->init(6,7);
+    encoder1->addWatchPoint(-1000);
+    encoder1->addWatchPoint(-500);
+    encoder1->addWatchPoint(0);
+    encoder1->addWatchPoint(500);
+    encoder1->addWatchPoint(1000);
+    encoder1->start();
     MEncoderParse* encoderParse = new MEncoderParse;
     encoderParse->setEncoderCb([&](pcnt_unit_handle_t handle, pcnt_watch_event_data_t* watchEvData){
-        printf("pcntunit Event happen:\n");
-        if(handle == encoder1.getUnit()->getPcntUnitHand())
+        if(handle == encoder1->getUnit()->getPcntUnitHand())
         {
-            printf("pcntunit1 Event happen:\n");
-            cout << "value = " << watchEvData->watch_point_value <<endl;
-            cout << "get value = " << encoder1.getUnit()->getCount() <<endl;
+            //cout << "value = " << watchEvData->watch_point_value <<endl;
+            //cout << "get value = " << encoder1->getUnit()->getCount() <<endl;
         }
-    });*/
+    });
     uint32_t speed = (BDC_MCPWM_TIMER_RESOLUTION_HZ / BDC_MCPWM_FREQ_HZ);
     printf("speed = %lu\n",speed);
     Motor *motor = new Motor(0,BDC_MCPWM_FREQ_HZ, BDC_MCPWM_TIMER_RESOLUTION_HZ, GPIO_NUM_4,GPIO_NUM_5);
     motor->enable();
     motor->forward();
-    motor->setSpeed(400);
-    /*MMcpwm* motor1 = new MMcpwm;
-    motor1->init(0,GPIO_NUM_4,GPIO_NUM_5,BDC_MCPWM_FREQ_HZ,BDC_MCPWM_TIMER_RESOLUTION_HZ);
-    motor1->enable();
-    motor1->forward();
-    motor1->setSpeed(speed);
-    */
+    motor->setSpeed(speed);
+
     MbuttonParse* buttonParseData = new MbuttonParse;
     MespNowDataParse* espnowData = new MespNowDataParse ;
     espnowData->enableEvent(E_EVENT_ID_BUTTON|E_EVENT_ID_ESP_NOW);
@@ -532,41 +526,49 @@ extern "C" void app_main(void)
 
     espnowData->setButtonPressCb([&](uint32_t id, uint32_t buttonNum, uint32_t len, bool bpressDown)
     {
-        static uint8_t sta = 1;
         cout << "buttonNum = " << buttonNum << endl;
         //cout << "data len = " << len << endl;
         const uint8_t buff[] = "hellow world";
-        if(motor->isEnable())
+
+        switch(buttonNum)
         {
-            motor->brake();
-            motor->disable();
-            cout << "disable motor" << endl;
-        }
-        else
-        {
-            motor->forward();
-            motor->enable();
-            cout << "enable motor" << endl;
-        }
-        switch(sta)
-        {
-            case 1:
-            
+            case 0:
+            speed -= 10;
+            if(speed <= 10)
+            {
+                speed =  (BDC_MCPWM_TIMER_RESOLUTION_HZ / BDC_MCPWM_FREQ_HZ);
+            }
+            motor->setSpeed(speed);
+            printf("speed is %lu\n",speed);
             //ledstrip.setRGBAndUpdate(RGB_COLOR_RED);
             break;
-            case 2:
-    
+            case 45:
+            if(motor->isEnable())
+            {
+                motor->brake();
+                motor->disable();
+                cout << "disable motor" << endl;
+            }
+            else
+            {
+                motor->forward();
+                motor->enable();
+                cout << "enable motor" << endl;
+            }
             //ledstrip.setRGBAndUpdate(RGB_COLOR_BLUE);
             break;
             default: 
-                sta = 0;
             break;
         }
         espnow->sendBroadCastToGetAllDevice(buff, sizeof(buff));
-        sta ++;
     });
     espnowData->setDataParseRecvCb([&](stMespNowEventRecv* recv,bool isbroadCast){
-        
+        stBaseCmd* mcmd = reinterpret_cast<stBaseCmd*>(recv->data);
+        if(mcmd->eid == E_ESP_CMD_ID_MOTOR_CTRL)
+        {
+            printf("mcmd->eid\n");
+        }
+
         static uint8_t sta = 1;
         switch(sta)
         {
@@ -602,7 +604,8 @@ extern "C" void app_main(void)
     }
     delete buttonParseData;
     delete espnowData;
-    //delete encoderParse;
+    delete encoderParse;
+    delete encoder1;
     delete motor;
 }
 #endif

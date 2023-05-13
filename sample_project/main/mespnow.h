@@ -105,10 +105,10 @@ public:
             msg.eventId = E_EVENT_ID_ESP_NOW;
             msg.data = reinterpret_cast<uint8_t*>(evt);
             msg.dataLen = sizeof(stMespNowEvent);
-            msg.clean = [evt](){
-                if(evt)
+            msg.clean = [](void* data){
+                if(data)
                 {
-                    free(evt);
+                    free(data);
                 }
             };
             stMespNowEventSend* psend = &evt->info.send;
@@ -144,9 +144,10 @@ public:
             msg.eventId = E_EVENT_ID_ESP_NOW;
             msg.data = reinterpret_cast<uint8_t*>(evt);
             msg.dataLen = sizeof(stMespNowEvent);
-            msg.clean = [evt](){
-                if(evt)
+            msg.clean = [](void* data){
+                if(data)
                 {
+                    stMespNowEvent* evt = static_cast<stMespNowEvent*>(data);
                     if(evt->info.recv.data)
                     {
                         free(evt->info.recv.data);

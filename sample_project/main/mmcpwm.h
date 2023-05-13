@@ -8,7 +8,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "driver/mcpwm_prelude.h"
-#include "stdarg.h"
+#include <stdarg.h>
 
 class McpwmTimer
 {
@@ -324,34 +324,49 @@ public:
         }
         return true;
     }
-    bool setActionsOnTimerEvent(mcpwm_gen_timer_event_action_t evAct, mcpwm_gen_timer_event_action_t end)
+    bool setActionsOnTimerEvent(mcpwm_gen_timer_event_action_t evAct, ...)
     {
-        esp_err_t err = mcpwm_generator_set_actions_on_timer_event(genHandle_, evAct, end);
+        va_list vl;
+        va_start (vl, evAct);
+        mcpwm_gen_timer_event_action_t timerEventActionEnd = {.direction = MCPWM_TIMER_DIRECTION_UP, .event = MCPWM_TIMER_EVENT_INVALID, .action = MCPWM_GEN_ACTION_HIGH};
+        esp_err_t err = mcpwm_generator_set_actions_on_timer_event(genHandle_, evAct, vl, timerEventActionEnd);
         if(err != ESP_OK)
         {
             printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
+            va_end (vl);
             return false;
         }
+        va_end (vl);
         return true;
     }
-    bool setActionsOnCompareEvent(mcpwm_gen_compare_event_action_t evAct, mcpwm_gen_compare_event_action_t end)
+    bool setActionsOnCompareEvent(mcpwm_gen_compare_event_action_t evAct, ...)
     {
-        esp_err_t err = mcpwm_generator_set_actions_on_compare_event(genHandle_, evAct, end);
+        va_list vl;
+        va_start (vl, evAct);
+        mcpwm_gen_compare_event_action_t compareEventActionEnd = {.direction = MCPWM_TIMER_DIRECTION_UP, .comparator = nullptr, .action = MCPWM_GEN_ACTION_LOW};
+        esp_err_t err = mcpwm_generator_set_actions_on_compare_event(genHandle_, evAct, vl, compareEventActionEnd);
         if(err != ESP_OK)
         {
             printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
+            va_end (vl);
             return false;
         }
+        va_end (vl);
         return true;
     }
-    bool setActionOnBrakeEvent(mcpwm_gen_brake_event_action_t evAct, mcpwm_gen_brake_event_action_t end)
+    bool setActionOnBrakeEvent(mcpwm_gen_brake_event_action_t evAct, ...)
     {
-        esp_err_t err = mcpwm_generator_set_actions_on_brake_event(genHandle_, evAct, end);
+        va_list vl;
+        va_start (vl, evAct);
+        mcpwm_gen_brake_event_action_t brakeEventActionEnd = { .direction = MCPWM_TIMER_DIRECTION_UP, .brake_mode = MCPWM_OPER_BRAKE_MODE_INVALID, .action = MCPWM_GEN_ACTION_LOW};
+        esp_err_t err = mcpwm_generator_set_actions_on_brake_event(genHandle_, evAct, vl, brakeEventActionEnd);
         if(err != ESP_OK)
         {
             printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
+            va_end (vl);
             return false;
         }
+        va_end (vl);
         return true;
     }
     bool setDeadTime()

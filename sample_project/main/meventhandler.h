@@ -18,6 +18,7 @@
 #include "esp_interface.h"
 #include <functional>
 #include <list>
+#include <mutex>
 
 #define E_EVENT_ID_INVALID  0X00
 #define E_EVENT_ID_KEY      BIT(0)
@@ -34,7 +35,7 @@ struct stMsgData
         uint8_t* data;
     };
     uint32_t dataLen;
-    std::function<void()> clean;
+    std::function<void(void*)> clean;
 };
 
 class eventClient
@@ -87,6 +88,7 @@ public:
         {
             return false;
         }
+        std::lock_guard<std::mutex> lock(lock_);
         for(auto& c : eventClientList_)
         {
             if(client == c)
@@ -103,6 +105,7 @@ public:
         if(client)
         {
             client->diableAllEvent();
+            std::lock_guard<std::mutex> lock(lock_);
             for(auto it = eventClientList_.begin(); it != eventClientList_.end();)
             {
                 if((*it) == client)
@@ -124,6 +127,7 @@ public:
         {
             if(xQueueReceive(mespnowQueue_, &msg, portMAX_DELAY) == pdTRUE)
             {
+                std::lock_guard<std::mutex> lock(lock_);
                 for(auto& c : eventClientList_)
                 {
                     if(c->getEvent() & msg.eventId)
@@ -133,7 +137,7 @@ public:
                 }
                 if(msg.clean)
                 {
-                    msg.clean();
+                    msg.clean(msg.data);
                 }
             }
         }
@@ -157,4 +161,5 @@ private:
     static const int ESPNOW_QUEUE_SIZE = 50;
     QueueHandle_t mespnowQueue_;
     list<eventClient*> eventClientList_;
+    std::mutex lock_;
 };
