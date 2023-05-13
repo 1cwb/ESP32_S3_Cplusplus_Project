@@ -232,17 +232,20 @@ private:
             encoder.eventId = E_EVENT_ID_ENCODER;
             encoder.dataLen = 4;
             encoder.data = reinterpret_cast<uint8_t*>(ecData);
-            encoder.clean = [&](){
-                if(ecData)
+            encoder.clean = [](void* data){
+                if(data)
                 {
-                    printf("clean encoder now\n");
-                    if(ecData->edata)
+                    stEncoderData* ecData = static_cast<stEncoderData*>(data);
+                    if(ecData)
                     {
-                        free(ecData->edata);
-                        ecData->edata = nullptr;
+                        if(ecData->edata)
+                        {
+                            free(ecData->edata);
+                            ecData->edata = nullptr;
+                        }
+                        free(ecData);
+                        ecData = nullptr;
                     }
-                    free(ecData);
-                    ecData = nullptr;
                 }
             };
             xQueueSendFromISR(MeventHandler::getINstance()->getQueueHandle(), &encoder, &xTaskWokenByReceive);
@@ -376,7 +379,6 @@ class Mencoder
 public:
     Mencoder():unit(new MPcntUnit),cha(new MPcntChannel(unit)),chb(new MPcntChannel(unit))
     {
-        //unit.RegisterEventCb();
     }
     bool init(int32_t gpioa, int32_t gpiob, const uint32_t glitchNS = 1000)
     {
