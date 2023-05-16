@@ -507,7 +507,6 @@ extern "C" void app_main(void)
     motor->forward();
     motor->setSpeed(0);
 
-    MbuttonParse* buttonParseData = new MbuttonParse;
     MespNowDataParse* espnowData = new MespNowDataParse ;
     espnowData->enableEvent(E_EVENT_ID_BUTTON|E_EVENT_ID_ESP_NOW);
     
@@ -622,7 +621,6 @@ extern "C" void app_main(void)
         //vTaskDelay(10000/portTICK_PERIOD_MS);
         //motor->reverse();
     }
-    delete buttonParseData;
     delete espnowData;
     delete encoderParse;
     delete encoder1;

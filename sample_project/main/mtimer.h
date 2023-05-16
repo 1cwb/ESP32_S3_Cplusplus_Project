@@ -29,7 +29,12 @@ public:
     bool updateAlarmValue(uint64_t alarmCount);
     bool disableAlarm();
     bool registerEventCallbacks(const gptimer_alarm_cb_t cbs, void *userData);
+    bool started() const
+    {
+        return started_;
+    }
 private:
+    bool started_;
     gptimer_handle_t handle_;
     gptimer_config_t config_;
     gptimer_alarm_config_t alarmConfig_;

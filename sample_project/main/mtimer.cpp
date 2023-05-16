@@ -2,7 +2,7 @@
 
 //    gptimer_handle_t handle_;
 //    gptimer_config_t config_;
-MTimer::MTimer():handle_(nullptr)
+MTimer::MTimer():started_(false),handle_(nullptr)
 {
 
 }
@@ -69,6 +69,7 @@ bool MTimer::start()
         printf("Error: %s()%d %s",__FUNCTION__,__LINE__,esp_err_to_name(err));
         return false;
     }
+    started_ = true;
     return true;
 }
 bool MTimer::stop()
@@ -79,6 +80,7 @@ bool MTimer::stop()
         printf("Error: %s()%d %s",__FUNCTION__,__LINE__,esp_err_to_name(err));
         return false;
     }
+    started_ = false;
     return true;
 }
 bool MTimer::setRawCount(const uint64_t value)
