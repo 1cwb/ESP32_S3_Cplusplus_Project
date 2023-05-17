@@ -49,10 +49,10 @@ public:
     bool setFadeTimeAndStart(uint32_t targetDuty = 0, uint32_t maXfadetimeMs = 1000, ledc_fade_mode_t fadeMode = LEDC_FADE_NO_WAIT);
 
     bool setDutyAndUpdate(uint32_t duty, uint32_t hpoint = 0);
+    bool swSetDutyAndUpdate(uint32_t duty);
     uint32_t getDuty();
     bool stop(uint32_t idleLevel = 0);
     bool fadeEndCbRegister(ledc_cb_t cb, void *useRarg);
-
 private:
     bool bfadeEnable_;
     int32_t gpioNum_;

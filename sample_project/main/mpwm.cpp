@@ -161,7 +161,22 @@ bool MPwm::setDutyAndUpdate(uint32_t duty, uint32_t hpoint)
     }
     return true;
 }
-
+bool MPwm::swSetDutyAndUpdate(uint32_t duty)
+{
+    esp_err_t err = ledc_set_duty(ledcChannel_.speed_mode, ledcChannel_.channel, duty);
+    if(err != ESP_OK)
+    {
+        printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
+        return false;
+    }
+    err = ledc_update_duty(ledcChannel_.speed_mode, ledcChannel_.channel);
+    if(err != ESP_OK)
+    {
+        printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
+        return false;
+    }
+    return true;
+}
 uint32_t MPwm::getDuty()
 {
     return ledc_get_duty(ledcTimer_->getSpeedMode(), ledcChannel_.channel);
