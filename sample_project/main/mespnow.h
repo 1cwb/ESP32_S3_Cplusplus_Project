@@ -442,7 +442,7 @@ class MespNowDataParse : public eventClient
 {
     using EventSendCallBack = std::function<void(stMespNowEventSend*,bool)>;
     using EventRecvCallBack = std::function<void(stMespNowEventRecv*,bool)>;
-    using EventButtonPressCb = std::function<void(uint32_t, uint32_t, uint32_t, bool)>;
+    using EventButtonPressCb = std::function<void(uint32_t, uint32_t, uint32_t, bool, uint32_t)>;
 public:
     MespNowDataParse() : sendCb_(new EventSendCallBack),
                          recvCb_(new EventRecvCallBack),
@@ -479,9 +479,10 @@ public:
             if(keyCb_ && *keyCb_)
             {
                 uint32_t buttonNum = 0;
-                bool bpressDown = 0;
-                stButtonInfo::parseBttonInfo(reinterpret_cast<uint32_t>(data), &buttonNum, &bpressDown);
-                (*keyCb_)(eventId & E_EVENT_ID_BUTTON, buttonNum, dataLen, bpressDown);
+                bool blongPress = 0;
+                uint32_t timernum = 0;
+                stButtonInfo::parseBttonInfo(reinterpret_cast<uint32_t>(data), &buttonNum, &blongPress, &timernum);
+                (*keyCb_)(eventId & E_EVENT_ID_BUTTON, buttonNum, dataLen, blongPress, timernum);
             }
         }
         if(eventId & E_EVENT_ID_ESP_NOW)

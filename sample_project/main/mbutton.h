@@ -8,12 +8,14 @@
 struct stButtonInfo
 {
     uint32_t gpioNum : 7;
-    bool pressDown : 1;
-    static void parseBttonInfo(uint32_t val, uint32_t* buttonNum, bool* bpressDown)
+    bool blongPress : 1;
+    uint32_t timer : 24;
+    static void parseBttonInfo(uint32_t val, uint32_t* buttonNum, bool* longPress, uint32_t* timer)
     {
         stButtonInfo* pinfo = reinterpret_cast<stButtonInfo*>(&val);
         *buttonNum = pinfo->gpioNum;
-        *bpressDown = pinfo->pressDown;
+        *longPress = pinfo->blongPress;
+        *timer = pinfo->timer;
     }
 };
 
@@ -27,6 +29,7 @@ public:
       bloopKeyEvent_(loopKeyEvent),
       longPressTimer_(longPressTimer),
       loopPressTimer_(loopPressTimer),
+      blongPress_(false),
       button_(new MGpio(pin, GPIO_MODE_INPUT, bInitHighLevel ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE, bInitHighLevel ? GPIO_PULLDOWN_DISABLE : GPIO_PULLDOWN_ENABLE, GPIO_INTR_ANYEDGE))
     {
         button_->installIsrService();
@@ -104,6 +107,14 @@ public:
     {
         return bloopKeyEvent_;
     }
+    void setLongPress(bool blongPress)
+    {
+        blongPress_ = blongPress;
+    }
+    bool bLongPress() const
+    {
+        return blongPress_;
+    }
     MGpio* getGpio()
     {
         return button_;
@@ -136,6 +147,7 @@ private:
     bool bloopKeyEvent_;
     uint32_t longPressTimer_;
     uint32_t loopPressTimer_;
+    bool blongPress_;
     MGpio* button_;
 };
 
@@ -172,8 +184,10 @@ public:
                         keyEvent.dataLen = 4;
                         keyEvent.val = 0;
                         stButtonInfo* pbtinfo = reinterpret_cast<stButtonInfo*>(&keyEvent.val);
+                        pbutton->setLongPress(true);
                         pbtinfo->gpioNum = pbutton->getGpio()->getPin();
-                        pbtinfo->pressDown = true;
+                        pbtinfo->blongPress = pbutton->bLongPress();
+                        pbtinfo->timer = pbutton->getTotalTickCount();
                         xQueueSend(MeventHandler::getINstance()->getQueueHandle(), &keyEvent, 20);
                         pbutton->setPreLongPressTickCount(pbutton->getTotalTickCount() - pbutton->getLongPressTimer() + pbutton->getLoopPressTimer());
                     }
@@ -189,7 +203,9 @@ public:
                     keyEvent.val = 0;
                     stButtonInfo* pbtinfo = reinterpret_cast<stButtonInfo*>(&keyEvent.val);
                     pbtinfo->gpioNum = pbutton->getGpio()->getPin();
-                    pbtinfo->pressDown = true;
+                    pbtinfo->blongPress = pbutton->bLongPress();
+                    pbtinfo->timer = pbutton->getTotalTickCount();
+                    pbutton->setLongPress(false);
                     xQueueSend(MeventHandler::getINstance()->getQueueHandle(), &keyEvent, 20);
                     pbutton->clearTotalTickCount();
                     pbutton->clearPreLongPressTickCount();
@@ -278,7 +294,7 @@ private:
 
 class MButton : public eventClient
 {
-    using EventButtonPressCb = std::function<void(uint32_t, uint32_t, uint32_t, bool)>;
+    using EventButtonPressCb = std::function<void(uint32_t, uint32_t, uint32_t, bool, uint32_t)>;
 public:
     MButton(gpio_num_t pin,  bool loopKeyEvent = true,uint32_t longPressTimer = 100, uint32_t loopPressTimer = 20, bool bInitHighLevel = true):button_(new MprivButton(pin, loopKeyEvent, longPressTimer, loopPressTimer, bInitHighLevel)),keyCb_(new EventButtonPressCb)
     {
@@ -310,14 +326,15 @@ public:
         if(eventId & E_EVENT_ID_BUTTON)
         {
             uint32_t buttonNum = 0;
-            bool bpressDown = 0;
-            stButtonInfo::parseBttonInfo(reinterpret_cast<uint32_t>(data), &buttonNum, &bpressDown);
+            bool longPress = 0;
+            uint32_t timernum = 0;
+            stButtonInfo::parseBttonInfo(reinterpret_cast<uint32_t>(data), &buttonNum, &longPress, &timernum);
 
             if(button_->getGpio()->getPin() == buttonNum)
             {
                 if(keyCb_ && *keyCb_)
                 {
-                    (*keyCb_)(eventId & E_EVENT_ID_BUTTON, buttonNum, dataLen, bpressDown);
+                    (*keyCb_)(eventId & E_EVENT_ID_BUTTON, buttonNum, dataLen, longPress, timernum);
                 }
             }
         }

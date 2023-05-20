@@ -85,11 +85,11 @@ public:
     MLcd& operator=(MLcd&& ) = delete;
     void lcdCmd(const uint8_t cmd)
     {
-        spidevice_.pollingTransmit(&cmd, 1, (void*)(0));
+        spidevice_->pollingTransmit(&cmd, 1, (void*)(0));
     }
     void lcdData(const uint8_t *data, int len)
     {
-        spidevice_.pollingTransmit(data, len, (void*)(1));
+        spidevice_->pollingTransmit(data, len, (void*)(1));
     }
     void lcdWriteU8(const uint8_t data)
     {
@@ -116,9 +116,9 @@ private:
     uint16_t width_;
     uint16_t height_;
 
-    MSpiBus spibus_;
-    MSpiDevice spidevice_;
-    MLed back_;
-    MPwmTimer pwmTimer_;
-    MPwm pwm_;
+    MSpiBus* spibus_;
+    MSpiDevice* spidevice_;
+    MLed* back_;
+    MPwmTimer* pwmTimer_;
+    MPwm* pwm_;
 };

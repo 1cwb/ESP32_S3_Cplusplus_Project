@@ -520,7 +520,7 @@ extern "C" void app_main(void)
     espnow->wifiinit();
     espnow->espNowInit();
 
-    espnowData->setButtonPressCb([&](uint32_t id, uint32_t buttonNum, uint32_t len, bool bpressDown)
+    espnowData->setButtonPressCb([&](uint32_t id, uint32_t buttonNum, uint32_t len, bool blongPress, uint32_t timerNum)
     {
         cout << "buttonNum = " << buttonNum << endl;
         //cout << "data len = " << len << endl;

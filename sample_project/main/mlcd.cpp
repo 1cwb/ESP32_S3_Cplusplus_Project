@@ -11,7 +11,7 @@ void lcd_spi_pre_transfer_callback(spi_transaction_t *t)
     gpio_set_level(PIN_NUM_DC, dc);
 }
 
-MLcd::MLcd(uint16_t colstart, uint16_t rowstart, uint16_t initHeight, uint16_t initWidth, uint16_t width, uint16_t height) : back_(PIN_NUM_BCKL),pwm_(back_.getPinNum(), &pwmTimer_)
+MLcd::MLcd(uint16_t colstart, uint16_t rowstart, uint16_t initHeight, uint16_t initWidth, uint16_t width, uint16_t height) :spibus_(new MSpiBus), spidevice_(new MSpiDevice), back_(new MLed (PIN_NUM_BCKL)),pwmTimer_(new MPwmTimer),pwm_(new MPwm(back_->getPinNum(), pwmTimer_))
 {
     colstart_ = colstart;
     rowstart_ = rowstart;
@@ -19,19 +19,40 @@ MLcd::MLcd(uint16_t colstart, uint16_t rowstart, uint16_t initHeight, uint16_t i
     initWidth_ = initWidth;
     width_ = width;
     height_ = height;
-    spibus_.spiBusInit(PIN_NUM_MOSI, PIN_NUM_MISO, PIN_NUM_CLK, LCD_HOST, SPI_DMA_CH_AUTO, SPIFIFOSIZE * 240 * 2 + 8);
-    spidevice_.init(26 * 1000 * 1000, PIN_NUM_CS, lcd_spi_pre_transfer_callback);
-    spibus_.addDevice(&spidevice_);
+
+    spibus_->spiBusInit(PIN_NUM_MOSI, PIN_NUM_MISO, PIN_NUM_CLK, LCD_HOST, SPI_DMA_CH_AUTO, SPIFIFOSIZE * 240 * 2 + 8);
+    spidevice_->init(26 * 1000 * 1000, PIN_NUM_CS, lcd_spi_pre_transfer_callback);
+    spibus_->addDevice(spidevice_);
     lcdInit();
     fillScreen(TFT_BLACK);
 
-    pwm_.channelConfig();
-    pwm_.enableFade(0);
+    pwm_->channelConfig();
+    pwm_->enableFade(0);
 }
 MLcd::~MLcd()
 {
-    spibus_.removeDevice(&spidevice_);
-    spibus_.spiBusDeinit();
+    spibus_->removeDevice(spidevice_);
+    spibus_->spiBusDeinit();
+    if(pwm_)
+    {
+        delete pwm_;
+    }
+    if(pwmTimer_)
+    {
+        delete pwmTimer_;
+    }
+    if(back_)
+    {
+        delete back_;
+    }
+    if(spidevice_)
+    {
+        delete spidevice_;
+    }
+    if(spibus_)
+    {
+        delete spibus_;
+    }
 }
 void MLcd::lcdInit()
 {
@@ -211,7 +232,7 @@ void MLcd::lcdSendUint16R(const uint16_t data, int32_t repeats)
         for (i = 0; i < (bytes_to_transfer + 3) / 4; i++) {
             word_tmp[i] = word;
         }
-        spidevice_.transmit(reinterpret_cast<const uint8_t*>(word_tmp), bytes_to_transfer, nullptr, 0,(void *) 1);
+        spidevice_->transmit(reinterpret_cast<const uint8_t*>(word_tmp), bytes_to_transfer, nullptr, 0,(void *) 1);
         repeats -= bytes_to_transfer / 2;
     }
 }
@@ -311,5 +332,5 @@ void MLcd::setBackLight(uint8_t percent)
     {
         percent = 100;
     }
-    pwm_.setDutyAndUpdate(percent * (8000 / 100));
+    pwm_->setDutyAndUpdate(percent * (8000 / 100));
 }
