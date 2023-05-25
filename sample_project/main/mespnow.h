@@ -311,13 +311,31 @@ public:
         esp_now_deinit();
         destroyAllPeer();
     }
-    bool espSendPrivateData(const uint8_t *peer_addr, const uint8_t *data, size_t len)
+    bool espSendToPrivateData(const uint8_t *peer_addr, const uint8_t *data, size_t len)
     {
         esp_err_t err = esp_now_send(peer_addr, data, len);
         if(err != ESP_OK)
         {
             printf("Error: %s()%d %s",__FUNCTION__,__LINE__,esp_err_to_name(err));
             return false;
+        }
+        return true;
+    }
+    bool espSendToAllPrivateData(const uint8_t *data, size_t len)
+    {
+        for(const auto& it: macList_)
+        {
+            if(it)
+            {
+                if(isBroadCast(it, ESP_NOW_ETH_ALEN))
+                {
+                    continue;
+                }
+                if(!espSendToPrivateData(it, data, len))
+                {
+                    return false;
+                }
+            }
         }
         return true;
     }
@@ -340,7 +358,7 @@ public:
         {
             memcpy(&buffer[ESP_NOW_ETH_ALEN] , data, len);
         }
-        if(!espSendPrivateData(broadCastMac_, buffer, newLen))
+        if(!espSendToPrivateData(broadCastMac_, buffer, newLen))
         {
             printf("Error : send Broad Cast Info Fail\n");
             free(buffer);

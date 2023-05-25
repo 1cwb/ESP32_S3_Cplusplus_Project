@@ -481,8 +481,32 @@ extern "C" void app_main(void)
     ledstrip.init();
     ledstrip.setRGBAndUpdate(RGB_COLOR_BLACK);
 
+    MespNowDataParse* espnowData = new MespNowDataParse ;
+    espnowData->enableEvent(E_EVENT_ID_BUTTON|E_EVENT_ID_ESP_NOW);
+    
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK( ret );
+    MEspNow* espnow = MEspNow::getINstance();
+    espnow->wifiinit();
+    espnow->espNowInit();
+
     MButton button(GPIO_NUM_45);
     MButton buttonBoot(GPIO_NUM_0);
+
+    buttonBoot.setButtonPressCb([&](uint32_t id, uint32_t buttonNum, uint32_t len, bool blongPress, uint32_t timerNum){
+            if(blongPress && timerNum >= 500 && timerNum< 510)
+            {
+                stBaseCmd connectCmd;
+                connectCmd.setData(E_ESP_CMD_ID_CONNECT, nullptr, 0);
+                espnow->sendBroadCastToGetAllDevice(reinterpret_cast<uint8_t*>(&connectCmd), sizeof(connectCmd));
+            }
+            //servoPwm.swSetDutyAndUpdate(MOTOR_SERVO_DEGREE_45);
+            //MotorPwm.swSetDutyAndUpdate(600);
+        });
 
     Mencoder* encoder1 = new Mencoder;
     encoder1->init(6,7);
@@ -507,103 +531,14 @@ extern "C" void app_main(void)
     motor->forward();
     motor->setSpeed(0);
 
-    MespNowDataParse* espnowData = new MespNowDataParse ;
-    espnowData->enableEvent(E_EVENT_ID_BUTTON|E_EVENT_ID_ESP_NOW);
-    
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK( ret );
-    MEspNow* espnow = MEspNow::getINstance();
-    espnow->wifiinit();
-    espnow->espNowInit();
-
-    espnowData->setButtonPressCb([&](uint32_t id, uint32_t buttonNum, uint32_t len, bool blongPress, uint32_t timerNum)
-    {
-        cout << "buttonNum = " << buttonNum << endl;
-        //cout << "data len = " << len << endl;
-        const uint8_t buff[] = "hellow world";
-
-        switch(buttonNum)
-        {
-            case 0:
-            speed -= 10;
-            if(speed <= 10)
-            {
-                speed =  (BDC_MCPWM_TIMER_RESOLUTION_HZ / BDC_MCPWM_FREQ_HZ);
-            }
-            motor->setSpeed(speed);
-            printf("speed is %lu\n",speed);
-            //ledstrip.setRGBAndUpdate(RGB_COLOR_RED);
-            break;
-            case 45:
-            if(motor->isEnable())
-            {
-                motor->brake();
-                motor->disable();
-                cout << "disable motor" << endl;
-            }
-            else
-            {
-                motor->forward();
-                motor->enable();
-                cout << "enable motor" << endl;
-            }
-            //ledstrip.setRGBAndUpdate(RGB_COLOR_BLUE);
-            break;
-            default: 
-            break;
-        }
-        espnow->sendBroadCastToGetAllDevice(buff, sizeof(buff));
-    });
     espnowData->setDataParseRecvCb([&](stMespNowEventRecv* recv,bool isbroadCast){
         stBaseCmd* mcmd = reinterpret_cast<stBaseCmd*>(recv->data);
-        stMotorStatus status;
-        stBaseCmd cmd;
-        if(mcmd->eid == E_ESP_CMD_ID_MOTOR_CTRL)
+        if(!isbroadCast && mcmd->eid == E_ESP_CMD_ID_CONNECT)//connect
         {
-            switch (mcmd->udata.motorCmd.ecmd)
-            {
-                case E_MOTOR_CMD_COAST:
-                    motor->coast();
-                    motor->setSpeed(mcmd->udata.motorCmd.uspeed);
-                    ledstrip.setRGBAndUpdate(RGB_COLOR_BLACK);
-                    status.setStatus(E_MOTOR_CMD_COAST, mcmd->udata.motorCmd.uspeed);
-                    cmd.setData(E_ESP_CMD_ID_MOTOR_STATUS, reinterpret_cast<void*>(&status), sizeof(stMotorStatus));
-                    break;
-                case E_MOTOR_CMD_FORWARD:
-                    motor->forward();
-                    motor->setSpeed(mcmd->udata.motorCmd.uspeed);
-                    ledstrip.setRGBAndUpdate(RGB_COLOR_GREEN);
-                    status.setStatus(E_MOTOR_CMD_FORWARD, mcmd->udata.motorCmd.uspeed);
-                    cmd.setData(E_ESP_CMD_ID_MOTOR_STATUS, reinterpret_cast<void*>(&status), sizeof(stMotorStatus));
-                    break;
-                case E_MOTOR_CMD_REVERSE:
-                    motor->reverse();
-                    motor->setSpeed(mcmd->udata.motorCmd.uspeed);
-                    ledstrip.setRGBAndUpdate(RGB_COLOR_BLUE);
-                    status.setStatus(E_MOTOR_CMD_REVERSE, mcmd->udata.motorCmd.uspeed);
-                    cmd.setData(E_ESP_CMD_ID_MOTOR_STATUS, reinterpret_cast<void*>(&status), sizeof(stMotorStatus));
-                    break;
-                case E_MOTOR_CMD_BRAKE:
-                    motor->brake();
-                    motor->setSpeed(mcmd->udata.motorCmd.uspeed);
-                    status.setStatus(E_MOTOR_CMD_BRAKE, mcmd->udata.motorCmd.uspeed);
-                    cmd.setData(E_ESP_CMD_ID_MOTOR_STATUS, reinterpret_cast<void*>(&status), sizeof(stMotorStatus));
-                    break;
-                case E_MOTOR_CMD_SET_SPEED:
-                    motor->setSpeed(mcmd->udata.motorCmd.uspeed);
-                    status.setStatus(E_MOTOR_CMD_SET_SPEED, mcmd->udata.motorCmd.uspeed);
-                    cmd.setData(E_ESP_CMD_ID_MOTOR_STATUS, reinterpret_cast<void*>(&status), sizeof(stMotorStatus));
-                    break;
-                default:
-                    break;
-            }
-            espnow->sendBroadCastToGetAllDevice(reinterpret_cast<uint8_t*>(&cmd), sizeof(stBaseCmd));
+            espnow->addPeer(recv->macAddr);
+            ledstrip.setRGBAndUpdate(RGB_COLOR_BLUE);
         }
-        else if(mcmd->eid == E_ESP_CMD_ID_SEND_STR)
+        if(mcmd->eid == E_ESP_CMD_ID_SEND_STR)
         {
             char data[128] = {0};
             memcpy(data, mcmd->udata.buf, mcmd->dataLen);
