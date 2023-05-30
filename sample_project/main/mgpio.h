@@ -31,4 +31,5 @@ public:
 private:
     gpio_num_t pin_;
     gpio_config_t gpioCfg_;
+    static bool isrServerInstalled;
 };
