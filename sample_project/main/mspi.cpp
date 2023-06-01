@@ -46,7 +46,9 @@ bool MSpiBus::removeDevice(MSpiDevice* dev)
     {
         dev_ = nullptr;
     }
+    SPI_DEVICE_MUTEX_TAKE(*dev->getMutex(), ESP_FAIL);
     esp_err_t err = spi_bus_remove_device(*dev->getHandle());
+    SPI_DEVICE_MUTEX_GIVE(*dev->getMutex(), ESP_FAIL);
     if(err != ESP_OK)
     {
         printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));

@@ -31,6 +31,7 @@ MLcd::MLcd(uint16_t colstart, uint16_t rowstart, uint16_t initHeight, uint16_t i
 }
 MLcd::~MLcd()
 {
+    spidevice_->deinit();
     spibus_->removeDevice(spidevice_);
     spibus_->spiBusDeinit();
     if(pwm_)
@@ -232,7 +233,7 @@ void MLcd::lcdSendUint16R(const uint16_t data, int32_t repeats)
         for (i = 0; i < (bytes_to_transfer + 3) / 4; i++) {
             word_tmp[i] = word;
         }
-        spidevice_->transmit(reinterpret_cast<const uint8_t*>(word_tmp), bytes_to_transfer, nullptr, 0,(void *) 1);
+        spidevice_->transferBytes(reinterpret_cast<const uint8_t*>(word_tmp), nullptr, bytes_to_transfer, (void *) 1); //transmit(reinterpret_cast<const uint8_t*>(word_tmp), bytes_to_transfer, nullptr, 0,(void *) 1);
         repeats -= bytes_to_transfer / 2;
     }
 }

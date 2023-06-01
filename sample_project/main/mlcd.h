@@ -85,11 +85,11 @@ public:
     MLcd& operator=(MLcd&& ) = delete;
     void lcdCmd(const uint8_t cmd)
     {
-        spidevice_->pollingTransmit(&cmd, 1, (void*)(0));
+        spidevice_->transferByte(cmd, nullptr, (void*)(0));
     }
     void lcdData(const uint8_t *data, int len)
     {
-        spidevice_->pollingTransmit(data, len, (void*)(1));
+        spidevice_->transferBytes(data, nullptr, len, (void*)(1));
     }
     void lcdWriteU8(const uint8_t data)
     {
