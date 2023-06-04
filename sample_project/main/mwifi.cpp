@@ -1,9 +1,14 @@
 #include "mwifi.h"
 uint8_t MWifiBase::initStatus_ = 0x00;
 wifi_init_config_t MWifiBase::initCfg_;
+MEvent::MEventHandlerCallback MWifiBase::wifiEventHandleCb_ = nullptr;
+esp_event_handler_instance_t MWifiBase::instanceAndyId_ = nullptr;
+esp_event_handler_instance_t MWifiBase::instanceGotIp_ = nullptr;
 
 MWifiBase::MWifiBase()
 {
+    enableEvent(E_EVENT_ID_ESP_WIFI);
+    MeventHandler::getINstance()->registerClient(this);
     init();
 }
 MWifiBase::~MWifiBase()
@@ -25,13 +30,6 @@ bool MWifiBase::init()
         return false;
     }
     initStatus_ |= ESP_WIFI_NETIF_INIT_SUCCESS;
-    err = esp_event_loop_create_default();
-    if(err != ESP_OK)
-    {
-        printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
-        return false;
-    }
-    initStatus_ |= ESP_WIFI_EVENTLOOP_INIT_SUCCESS;
     wifi_init_config_t tempCfg = WIFI_INIT_CONFIG_DEFAULT();
     initCfg_ = tempCfg;
     memcpy(&initCfg_, &tempCfg, sizeof(initCfg_));
@@ -42,11 +40,70 @@ bool MWifiBase::init()
         return false;
     }
     initStatus_ |= ESP_WIFI_INIT_SUCCESS;
+
+    wifiEventHandleCb_ = [](void* event_handler_arg,
+                            esp_event_base_t event_base,
+                            int32_t event_id,
+                            void* event_data)
+    {
+        stMsgData msg;
+        stMeventInfo* wifiEvent = reinterpret_cast<stMeventInfo*>(malloc(sizeof(stMeventInfo)));
+        if(!wifiEvent)
+        {
+            printf("Error: malloc stMeventInfo fail\n");
+            return;
+        }
+        memset(wifiEvent, 0, sizeof(stMeventInfo));
+        wifiEvent->eventBase = event_base;
+        wifiEvent->eventId = event_id;
+        if(event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
+        {
+            wifiEvent->eventData = malloc(sizeof(ip_event_got_ip_t));
+            if(!wifiEvent->eventData)
+            {
+                free(wifiEvent);
+                wifiEvent = nullptr;
+                printf("Error: malloc ip_event_got_ip_t fail\n");
+                return;
+            }
+            memcpy(wifiEvent->eventData, event_data, sizeof(ip_event_got_ip_t));
+        }
+        msg.eventId = E_EVENT_ID_ESP_WIFI;
+        msg.data = reinterpret_cast<uint8_t*>(wifiEvent);
+        msg.dataLen = sizeof(stMeventInfo);
+        msg.clean = [](void* data){
+            if(data)
+            {
+                stMeventInfo* p = reinterpret_cast<stMeventInfo*>(data);
+                if(p->eventData)
+                {
+                    free(p->eventData);
+                }
+                free(data);
+            }
+        };
+        if(xQueueSend(MeventHandler::getINstance()->getQueueHandle(), &msg, 20) != pdTRUE)
+        {
+            printf("Error: %s()%d send queue fail!\n",__FUNCTION__,__LINE__);
+        }
+    };
+    MEvent::getInstance()->registerEventHandlerInstance(WIFI_EVENT,
+                                                        ESP_EVENT_ANY_ID,
+                                                        wifiEventHandleCb_,
+                                                        nullptr,
+                                                        &instanceAndyId_);
+    MEvent::getInstance()->registerEventHandlerInstance(IP_EVENT,
+                                                        IP_EVENT_STA_GOT_IP,
+                                                        wifiEventHandleCb_,
+                                                        nullptr,
+                                                        &instanceGotIp_);
     return true;
 }
 bool MWifiBase::deinit()
 {
     esp_err_t err = ESP_OK;
+    MEvent::getInstance()->unregisterEventHandlerInstance(WIFI_EVENT, ESP_EVENT_ANY_ID, wifiEventHandleCb_);
+    MEvent::getInstance()->unregisterEventHandlerInstance(IP_EVENT, IP_EVENT_STA_GOT_IP, wifiEventHandleCb_);
     if(initStatus_ & ESP_WIFI_NETIF_INIT_SUCCESS)
     {
         err = esp_netif_deinit();
@@ -55,15 +112,6 @@ bool MWifiBase::deinit()
             printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
         }
         initStatus_ &= ~ ESP_WIFI_NETIF_INIT_SUCCESS;
-    }
-    if(initStatus_ & ESP_WIFI_EVENTLOOP_INIT_SUCCESS)
-    {
-        err = esp_event_loop_delete_default();
-        if(err != ESP_OK)
-        {
-            printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
-        }
-        initStatus_ &= ~ ESP_WIFI_EVENTLOOP_INIT_SUCCESS;
     }
     if(initStatus_ & ESP_WIFI_INIT_SUCCESS)
     {
@@ -160,7 +208,7 @@ bool MWifiBase::setMac(wifi_interface_t ifx, const uint8_t mac[6])
 }
 
 //////////////////////////////////////////////STA/////////////////////////////////////////////////
-MWifiStation* MWifiStation::getINstance()
+MWifiStation* MWifiStation::getInstance()
 {
     static MWifiStation wifista;
     return &wifista;
@@ -178,10 +226,8 @@ bool MWifiStation::init(bool onlyStaMode)
         return false;
     }
     wifi_mode_t mode = onlyStaMode ? WIFI_MODE_STA : WIFI_MODE_APSTA;
-    esp_err_t err = setMode(mode);
-    if(err != ESP_OK)
+    if(!setMode(mode))
     {
-        printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
         return false;
     }
     if(onlyStaMode)
@@ -246,7 +292,7 @@ bool MWifiStation::wifiGetScanApNum(uint16_t* apNum)
     return true;
 }
 //////////////////////////////////////////////////AP////////////////////////////////////////////
-MWifiAP* MWifiAP::getINstance()
+MWifiAP* MWifiAP::getInstance()
 {
     static MWifiAP wifiap;
     return &wifiap;

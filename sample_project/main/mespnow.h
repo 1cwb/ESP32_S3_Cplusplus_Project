@@ -56,17 +56,25 @@ public:
         static MEspNow mespnow_;
         return &mespnow_;
     }
-    bool wifiinit(wifi_mode_t mode = WIFI_MODE_AP)
+    bool wifiinit(wifi_mode_t mode = WIFI_MODE_STA)
     {
+        wifi_mode_t currentMode = WIFI_MODE_NULL;
         if(!setStorage(WIFI_STORAGE_RAM))
         {
             return false;
         }
-        if(!setMode(mode))
+        if(getMode(&currentMode))
         {
-            return false;
+            if(currentMode == WIFI_MODE_NULL)
+            {
+                currentMode = mode;
+                if(!setMode(mode))
+                {
+                    return false;
+                }
+            }
         }
-        mode_  = mode;
+        mode_  = currentMode;
         MWifiBase::start();
 
 #if CONFIG_ESPNOW_ENABLE_LONG_RANGE

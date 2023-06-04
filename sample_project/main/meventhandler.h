@@ -6,19 +6,11 @@
 #include <time.h>
 #include <string.h>
 #include <assert.h>
-#include "mwifi.h"
-#include "nvs_flash.h"
-#include "esp_random.h"
-#include "esp_event.h"
-#include "esp_netif.h"
-#include "esp_wifi.h"
-#include "esp_mac.h"
-#include "esp_now.h"
-#include "esp_crc.h"
 #include "esp_interface.h"
 #include <functional>
 #include <list>
 #include <mutex>
+#include <thread>
 
 #define E_EVENT_ID_INVALID  0X00
 #define E_EVENT_ID_KEY      BIT(0)
@@ -150,7 +142,7 @@ private:
         {
             printf("Error: Create mutex fail!\n");
         }
-        static std::thread evenhandlerTh_(bind(&MeventHandler::onHandler, this));
+        static std::thread evenhandlerTh_(std::bind(&MeventHandler::onHandler, this));
         evenhandlerTh_.detach();
     }
     ~MeventHandler()
@@ -160,6 +152,6 @@ private:
 private:
     static const int ESPNOW_QUEUE_SIZE = 50;
     QueueHandle_t mespnowQueue_;
-    list<eventClient*> eventClientList_;
+    std::list<eventClient*> eventClientList_;
     std::mutex lock_;
 };
