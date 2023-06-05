@@ -31,7 +31,7 @@ public:
     static bool start();
 
     static bool stop();
-    static bool bInited() {return initStatus_ == (ESP_WIFI_NETIF_INIT_SUCCESS | ESP_WIFI_INIT_SUCCESS);}
+    static bool bInited() {return (initStatus_ & ESP_WIFI_NETIF_INIT_SUCCESS) && (initStatus_ & ESP_WIFI_INIT_SUCCESS);}
     static bool bStarted() {return initStatus_ & ESP_WIFI_NETIF_STARTED;}
     bool setStorage(wifi_storage_t storage);
     bool setMode(wifi_mode_t mode);
