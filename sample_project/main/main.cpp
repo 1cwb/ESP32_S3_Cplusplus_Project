@@ -458,7 +458,7 @@ extern "C" void app_main(void)
     }
 }
 #endif
-#if 1
+#if 0
 #include <thread>
 #include "mledstrip.h"
 #include "mrgbcolor.h"
@@ -560,5 +560,39 @@ extern "C" void app_main(void)
     delete encoderParse;
     delete encoder1;
     delete motor;
+}
+#endif
+
+#if 1
+#include <thread>
+#include "mledstrip.h"
+#include "mrgbcolor.h"
+#include "mbutton.h"
+#include "meventhandler.h"
+#include "mespnow.h"
+#include <iostream>
+#include "mbutton.h"
+#include "mespcmd.h"
+#include "mrocker.h"
+#include "mnvs.h"
+#include "mesptimer.h"
+
+using namespace std;
+
+extern "C" void app_main(void)
+{
+    MLcd lcd(35, 0, 320, 170, 170, 320);
+    lcd.setRotation(E_ROTATION_0);
+    lcd.setBackLight(100);
+    lcd.setAddress( 0, 0,  lcd.getWidth() - 1, lcd.getHeight() - 1);
+    lcd.fillScreen( TFT_GREEN);
+    lcd.drawString(0,0,"xxxx",TFT_RED);
+    int i = 0;
+    //esp_clk_tree_src_get_freq_hz
+    while(true)
+    {
+        lcd.reFreshFrame();
+        vTaskDelay(1000/portTICK_PERIOD_MS);
+    }
 }
 #endif

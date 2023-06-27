@@ -1,4 +1,5 @@
 #pragma once
+#include <mutex>
 #include "mspi.h"
 #include "driver/gpio.h"
 #include "mled.h"
@@ -74,11 +75,19 @@
 
 #define NO_OF_SAMPLES                               64          //Multisampling
 
+enum eRotation
+{
+    E_ROTATION_0,
+    E_ROTATION_90,
+    E_ROTATION_180,
+    E_ROTATION_270
+};
+
 class MLcd
 {
 public:
-    MLcd(uint16_t colstart = 52, uint16_t rowstart = 40, uint16_t initHeight = 240, uint16_t initWidth = 135, uint16_t width = 135, uint16_t height = 240);
-    ~MLcd();
+    MLcd(uint16_t colstart = 52, uint16_t rowstart = 40, uint16_t initHeight = 240, uint16_t initWidth = 135, uint16_t width = 135, uint16_t height = 240, uint8_t pixelOfBit = 2);
+    virtual ~MLcd();
     MLcd(const MLcd&) = delete;
     MLcd(MLcd&&) = delete;
     MLcd& operator=(const MLcd& ) = delete;
@@ -97,28 +106,53 @@ public:
     }
     void lcdInit();
     void lcdWriteByte( const uint16_t data);
-    void setAddress( uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
-    void setRotation( uint8_t m);
+    virtual void setAddress( uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
+    void setRotation( eRotation m);
+    void drawString(uint16_t x, uint16_t y, const char *p, uint16_t color, uint16_t backColor);
     void drawString(uint16_t x, uint16_t y, const char *p, uint16_t color);
     void lcdSendUint16R(const uint16_t data, int32_t repeats);
     void fillRect( int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color);
     void fillScreen( uint32_t color);
     void drawPixel(int32_t x, int32_t y, uint32_t color);
-    void drawChar(uint16_t x, uint16_t y, uint8_t num, uint8_t mode, uint16_t color);
+    void drawChar(uint16_t x, uint16_t y, uint8_t num, uint8_t mode, uint16_t color, uint16_t backColor);
+    void drawInRam(int32_t x, int32_t y, int32_t w, int32_t h, const unsigned char* picture, uint32_t len);
     uint16_t getWidth() const {return width_;}
     uint16_t getHeight() const {return height_;}
     void setBackLight(uint8_t percent);
+    void setRamData(const uint8_t* data, uint32_t len);
+    void reFreshFrame();
+    void reFreshFrame(int32_t x, int32_t y, int32_t w, int32_t h, const uint8_t* ram, uint32_t ramlen);
+    uint32_t getMaxDataSendSize() const
+    {
+        return maxTransFerBytes_;
+    }
+    uint8_t getPixelBytes() const
+    {
+        return pixelOfBit_;
+    }
+    void sendData(const uint8_t* data, size_t len)
+    {
+        spidevice_->transferBytes(data, nullptr, len, (void*)(1));
+    }
+
 private:
+    uint16_t oricolstart_;
+    uint16_t orirowstart_;
     uint16_t colstart_;
     uint16_t rowstart_;
     uint16_t initHeight_;
     uint16_t initWidth_;
     uint16_t width_;
     uint16_t height_;
+    uint8_t  pixelOfBit_;
+    uint32_t lcdRamSize_;
+    uint32_t maxTransFerBytes_;
 
     MSpiBus* spibus_;
     MSpiDevice* spidevice_;
     MLed* back_;
     MPwmTimer* pwmTimer_;
     MPwm* pwm_;
+    uint8_t* lcdRam_;//[240*135*2] = {0};
+    std::mutex mutex_;
 };

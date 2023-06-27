@@ -135,8 +135,9 @@ public:
             return false;
         }
         //typedef void (*esp_now_recv_cb_t)(const uint8_t *mac_addr, const uint8_t *data, int data_len);
-        err = esp_now_register_recv_cb([](const uint8_t *mac_addr, const uint8_t *data, int data_len){
-            if(mac_addr == nullptr || data == nullptr || data_len <= 0)
+        //typedef void (*esp_now_recv_cb_t)(const esp_now_recv_info_t * esp_now_info, const uint8_t *data, int data_len);
+        err = esp_now_register_recv_cb([](const esp_now_recv_info_t * espNowInfo, const uint8_t *data, int data_len){
+            if(espNowInfo->src_addr == nullptr || data == nullptr || data_len <= 0)
             {
                 printf("Error: %s()%d recv arg error!\n",__FUNCTION__,__LINE__);
                 return;
@@ -167,7 +168,7 @@ public:
             stMespNowEventRecv* precv = &evt->info.recv;
 
             evt->id = E_ESP_NOW_EVENT_RECV;
-            memcpy(precv->macAddr, mac_addr, ESP_NOW_ETH_ALEN);
+            memcpy(precv->macAddr, espNowInfo->src_addr, ESP_NOW_ETH_ALEN);
             precv->dataLen = data_len;
             precv->data = static_cast<uint8_t*>(malloc(data_len));
             if(precv->data == nullptr)

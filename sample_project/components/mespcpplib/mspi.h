@@ -36,7 +36,8 @@ public:
         devCfg_.mode = mode;
         devCfg_.duty_cycle_pos = 128;
         devCfg_.cs_ena_pretrans = 0;       
-        devCfg_.cs_ena_posttrans = 0;      
+        devCfg_.cs_ena_posttrans = 0;
+        devCfg_.clock_source = SPI_CLK_SRC_DEFAULT;
         devCfg_.clock_speed_hz = clockSpeedHz; //SPI_MASTER_FREQ_26M         
         devCfg_.input_delay_ns = 0;
 

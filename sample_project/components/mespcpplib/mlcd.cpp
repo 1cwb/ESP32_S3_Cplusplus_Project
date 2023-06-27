@@ -11,17 +11,13 @@ void lcd_spi_pre_transfer_callback(spi_transaction_t *t)
     gpio_set_level(PIN_NUM_DC, dc);
 }
 
-MLcd::MLcd(uint16_t colstart, uint16_t rowstart, uint16_t initHeight, uint16_t initWidth, uint16_t width, uint16_t height) :spibus_(new MSpiBus), spidevice_(new MSpiDevice), back_(new MLed (PIN_NUM_BCKL)),pwmTimer_(new MPwmTimer),pwm_(new MPwm(back_->getPinNum(), pwmTimer_))
+MLcd::MLcd(uint16_t colstart, uint16_t rowstart, uint16_t initHeight, uint16_t initWidth, uint16_t width, uint16_t height,  uint8_t pixelOfBit) 
+:oricolstart_(colstart),orirowstart_(rowstart),colstart_(colstart),rowstart_(rowstart),initHeight_(initHeight),initWidth_(initWidth),width_(width),height_(height),pixelOfBit_(pixelOfBit),lcdRamSize_(initHeight_ * initWidth_ * pixelOfBit_),maxTransFerBytes_(SPIFIFOSIZE * initWidth_ * pixelOfBit_),
+spibus_(new MSpiBus), spidevice_(new MSpiDevice), back_(new MLed (PIN_NUM_BCKL)),pwmTimer_(new MPwmTimer),pwm_(new MPwm(back_->getPinNum(), pwmTimer_)),lcdRam_(new uint8_t[lcdRamSize_])
 {
-    colstart_ = colstart;
-    rowstart_ = rowstart;
-    initHeight_ = initHeight;
-    initWidth_ = initWidth;
-    width_ = width;
-    height_ = height;
-
-    spibus_->spiBusInit(PIN_NUM_MOSI, PIN_NUM_MISO, PIN_NUM_CLK, LCD_HOST, SPI_DMA_CH_AUTO, SPIFIFOSIZE * 240 * 2 + 8);
-    spidevice_->init(26 * 1000 * 1000, PIN_NUM_CS, lcd_spi_pre_transfer_callback);
+    memset(lcdRam_, 0, lcdRamSize_);
+    spibus_->spiBusInit(PIN_NUM_MOSI, PIN_NUM_MISO, PIN_NUM_CLK, LCD_HOST, SPI_DMA_CH_AUTO, SPIFIFOSIZE * initWidth * pixelOfBit + 8);
+    spidevice_->init(80 * 1000 * 1000, PIN_NUM_CS, lcd_spi_pre_transfer_callback);
     spibus_->addDevice(spidevice_);
     lcdInit();
     fillScreen(TFT_BLACK);
@@ -53,6 +49,10 @@ MLcd::~MLcd()
     if(spibus_)
     {
         delete spibus_;
+    }
+    if(lcdRam_)
+    {
+        delete [] lcdRam_;
     }
 }
 void MLcd::lcdInit()
@@ -183,36 +183,36 @@ void MLcd::setAddress( uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
     lcdCmd( ST7789_RAMWR);
 }
 
-void MLcd::setRotation( uint8_t m)
+void MLcd::setRotation( eRotation m)
 {
     uint8_t rotation = m % 4;
     lcdCmd( ST7789_MADCTL);
     switch (rotation) {
-    case 0:
-        colstart_ = 52;
-        rowstart_ = 40;
+    case E_ROTATION_0:
+        colstart_ = oricolstart_;
+        rowstart_ = orirowstart_;
         width_  = initWidth_;
         height_ = initHeight_;
         lcdWriteU8( TFT_MAD_COLOR_ORDER);
         break;
 
-    case 1:
-        colstart_ = 40;
-        rowstart_ = 53;
+    case E_ROTATION_90:
+        colstart_ = orirowstart_;
+        rowstart_ = oricolstart_;
         width_  = initHeight_;
         height_ = initWidth_;
         lcdWriteU8( TFT_MAD_MX | TFT_MAD_MV | TFT_MAD_COLOR_ORDER);
         break;
-    case 2:
-        colstart_ = 53;
-        rowstart_ = 40;
+    case E_ROTATION_180:
+        colstart_ = oricolstart_;
+        rowstart_ = orirowstart_;
         width_  = initWidth_;
         height_ = initHeight_;
         lcdWriteU8( TFT_MAD_MX | TFT_MAD_MY | TFT_MAD_COLOR_ORDER);
         break;
-    case 3:
-        colstart_ = 40;
-        rowstart_ = 52;
+    case E_ROTATION_270:
+        colstart_ = orirowstart_;
+        rowstart_ = oricolstart_;
         width_  = initHeight_;
         height_ = initWidth_;
         lcdWriteU8( TFT_MAD_MV | TFT_MAD_MY | TFT_MAD_COLOR_ORDER);
@@ -226,7 +226,7 @@ void MLcd::lcdSendUint16R(const uint16_t data, int32_t repeats)
 {
     uint32_t i;
     uint32_t word = data << 16 | data;
-    uint32_t word_tmp[16];
+    uint32_t word_tmp[SPIFIFOSIZE] = {0};
 
     while (repeats > 0) {
         uint16_t bytes_to_transfer = MIN(repeats * sizeof(uint16_t), SPIFIFOSIZE * sizeof(uint32_t));
@@ -257,11 +257,14 @@ void MLcd::fillRect( int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color)
     if ((y + h) > height_) h = height_ - y;
 
     if ((w < 1) || (h < 1)) return;
-
-
-    setAddress( x, y, x + w - 1, y + h - 1);
-
-    lcdSendUint16R(SWAPBYTES(color), h * w);
+    std::lock_guard<std::mutex> lock(mutex_);
+    for(uint32_t j = 0; j < h; j++)
+    {
+        for(uint32_t i = 0; i < w; i++)
+        {
+            drawPixel(x + i, y + j, color);
+        }
+    }
 }
 
 void MLcd::fillScreen( uint32_t color)
@@ -271,31 +274,36 @@ void MLcd::fillScreen( uint32_t color)
 
 void MLcd::drawPixel(int32_t x, int32_t y, uint32_t color)
 {
-    setAddress(x, y, x, y);
-    lcdWriteByte(color);
+    uint8_t val;
+    uint32_t index = (x + (y*width_))*2;
+    val = color >> 8 ;
+    lcdRam_[index] = val;
+
+    val = color;
+    lcdRam_[index + 1] = val;
 }
 
-void MLcd::drawChar(uint16_t x, uint16_t y, uint8_t num, uint8_t mode, uint16_t color)
+void MLcd::drawChar(uint16_t x, uint16_t y, uint8_t num, uint8_t mode, uint16_t color, uint16_t backColor)
 {
     uint8_t temp;
     uint8_t pos, t;
-    uint16_t x0 = x;
+    if(color == backColor)
+    {
+        backColor = ~color;
+    }
     if (x > width_ - 16 || y > height_ - 16)return;
     num = num - ' ';
-    setAddress(x, y, x + 8 - 1, y + 16 - 1);
+    std::lock_guard<std::mutex> lock(mutex_);
     if (!mode) {
         for (pos = 0; pos < 16; pos++) {
             temp = asc2_1608[(uint16_t)num * 16 + pos];
             for (t = 0; t < 8; t++) {
                 if (temp & 0x01)
-                    lcdWriteByte(color);
+                    drawPixel(x + t, y + pos, color);
                 else
-                    lcdWriteByte(TFT_BLACK);
+                    drawPixel(x + t, y + pos, backColor);
                 temp >>= 1;
-                x++;
             }
-            x = x0;
-            y++;
         }
     } else {
         for (pos = 0; pos < 16; pos++) {
@@ -306,6 +314,23 @@ void MLcd::drawChar(uint16_t x, uint16_t y, uint8_t num, uint8_t mode, uint16_t 
                 temp >>= 1;
             }
         }
+    }
+}
+
+void MLcd::drawString(uint16_t x, uint16_t y, const char *p, uint16_t color, uint16_t backColor)
+{
+    while (*p != '\0') {
+        if (x > width_ - 16) {
+            x = 0;
+            y += 16;
+        }
+        if (y > height_ - 16) {
+            y = x = 0;
+            fillScreen(TFT_RED);
+        }
+        drawChar(x, y, *p, 0, color, backColor);
+        x += 8;
+        p++;
     }
 }
 
@@ -320,12 +345,11 @@ void MLcd::drawString(uint16_t x, uint16_t y, const char *p, uint16_t color)
             y = x = 0;
             fillScreen(TFT_RED);
         }
-        drawChar(x, y, *p, 0, color);
+        drawChar(x, y, *p, 1, color, color);
         x += 8;
         p++;
     }
 }
-
 
 void MLcd::setBackLight(uint8_t percent)
 {
@@ -334,4 +358,105 @@ void MLcd::setBackLight(uint8_t percent)
         percent = 100;
     }
     pwm_->setDutyAndUpdate(percent * (8000 / 100));
+}
+void MLcd::setRamData(const uint8_t* data, uint32_t len)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    memcpy(lcdRam_, data, len > lcdRamSize_ ? lcdRamSize_ : len);
+}
+
+void MLcd::drawInRam(int32_t x, int32_t y, int32_t w, int32_t h, const unsigned char* picture, uint32_t len)
+{
+    if(!picture || len == 0)
+    {
+        return;
+    }
+    if ((x >= width_) || (y >= height_)) return;
+
+    if (x < 0) {
+        w += x;
+        x = 0;
+    }
+    if (y < 0) {
+        h += y;
+        y = 0;
+    }
+
+    if ((x + w) > width_)  w = width_  - x;
+    if ((y + h) > height_) h = height_ - y;
+
+    if ((w < 1) || (h < 1)) return;
+    const unsigned char* p = picture;
+    uint32_t pixelWidth = w * pixelOfBit_;
+    uint32_t xmap = x*pixelOfBit_;
+    uint32_t xlen = getWidth()*pixelOfBit_;
+    if( (x == 0) && (y == 0) && (w = getWidth()) && (h == getHeight()))
+    {
+        setRamData(picture, lcdRamSize_);
+    }
+    else
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        for(uint32_t j = 0; j < h; j++)
+        {
+            for(uint32_t i = 0; i < pixelWidth; i++)
+            {
+                printf("n\n");
+                lcdRam_[(uint32_t)((xmap+i) + (y+j)*xlen)] = *(p++);
+                if(p >= picture + len)
+                {
+                    return;
+                }
+            }
+        }
+    }
+}
+
+void MLcd::reFreshFrame()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(lcdRamSize_ > maxTransFerBytes_)
+    {
+        for(uint32_t i = 0; i < lcdRamSize_; i += maxTransFerBytes_)
+        {
+            if(lcdRamSize_ - i > maxTransFerBytes_)
+            {
+                lcdData(lcdRam_ + i, maxTransFerBytes_);
+            }
+            else
+            {
+                lcdData(lcdRam_ + i, lcdRamSize_ - i);
+            }
+        }
+    }
+    else
+    {
+        lcdData(lcdRam_, lcdRamSize_);
+    }
+}
+void MLcd::reFreshFrame(int32_t x1, int32_t y1, int32_t x2, int32_t y2, const uint8_t* ram, uint32_t ramlen)
+{
+    if(!ram)
+    {
+        return;
+    }
+    setAddress(x1, y1, x2, y2);
+    if(ramlen > maxTransFerBytes_)
+    {
+        for(uint32_t i = 0; i < ramlen; i += maxTransFerBytes_)
+        {
+            if(ramlen - i > maxTransFerBytes_)
+            {
+                lcdData(ram + i, maxTransFerBytes_);
+            }
+            else
+            {
+                lcdData(ram + i, ramlen - i);
+            }
+        }
+    }
+    else
+    {
+        lcdData(ram, ramlen);
+    }
 }

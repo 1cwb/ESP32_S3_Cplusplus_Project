@@ -220,7 +220,7 @@ bool RmtBase::disable()
 bool MRmtTx::init(gpio_num_t gpio, uint32_t resolutionHz , size_t memBlockSymbols, size_t transQueueDepth ,bool invertOut, bool withDma, bool ioLoopBack, bool ioOdMode, rmt_clock_source_t clkSrc)
 {
     rmt_channel_handle_t handle;
-    txChanelCfg_.gpio_num = static_cast<int>(gpio);          
+    txChanelCfg_.gpio_num = gpio;          
     txChanelCfg_.clk_src = clkSrc;  
     txChanelCfg_.resolution_hz = resolutionHz;             
     txChanelCfg_.mem_block_symbols = memBlockSymbols;         
@@ -278,7 +278,7 @@ bool MRmtRx::init(gpio_num_t gpio, uint32_t resolutionHz , size_t memBlockSymbol
 {
     rmt_channel_handle_t handle;
 
-    rxChanelCfg_.gpio_num = static_cast<int>(gpio);          
+    rxChanelCfg_.gpio_num = gpio;
     rxChanelCfg_.clk_src = clkSrc;  
     rxChanelCfg_.resolution_hz = resolutionHz;             
     rxChanelCfg_.mem_block_symbols = memBlockSymbols;               
