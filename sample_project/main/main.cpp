@@ -588,7 +588,6 @@ extern "C" void app_main(void)
     lcd.fillScreen( TFT_GREEN);
     lcd.drawString(0,0,"xxxx",TFT_RED);
     int i = 0;
-    //esp_clk_tree_src_get_freq_hz
     while(true)
     {
         lcd.reFreshFrame();
