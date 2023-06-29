@@ -576,22 +576,33 @@ extern "C" void app_main(void)
 #include "mrocker.h"
 #include "mnvs.h"
 #include "mesptimer.h"
+#include "uidriver.h"
+#include "muicore.h"
+#include "muitext.h"
 
 using namespace std;
 
 extern "C" void app_main(void)
 {
-    MLcd lcd(35, 0, 320, 170, 170, 320);
-    lcd.setRotation(E_ROTATION_0);
-    lcd.setBackLight(100);
-    lcd.setAddress( 0, 0,  lcd.getWidth() - 1, lcd.getHeight() - 1);
-    lcd.fillScreen( TFT_GREEN);
-    lcd.drawString(0,0,"xxxx",TFT_RED);
-    int i = 0;
+    LcdDriver lcd;
+    MUicore::getInstance()->addLcd(&lcd); 
+    MUicore::getInstance()->setBackGround(TFT_YELLOW);
+    MUicore::getInstance()->updateUiNotify(nullptr);
+    MUiText text(10,10);
+    text.setText("wo cao ni ma -----------------------------------------------------",TFT_RED, TFT_RED);
+    int32_t i = -100;
     while(true)
     {
-        lcd.reFreshFrame();
-        vTaskDelay(1000/portTICK_PERIOD_MS);
+        vTaskDelay(20/portTICK_PERIOD_MS);
+        /*for(int x = 0; x < 170; x+=10)
+        {
+            for(int j = 0; j < 320 - 16; j+=10)
+            {
+                text.setIntNum(i++, TFT_PINK);
+                text.setXY(x,j);
+                vTaskDelay(100/portTICK_PERIOD_MS);
+            }
+        }*/
     }
 }
 #endif
