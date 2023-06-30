@@ -135,7 +135,6 @@ public:
             return false;
         }
         //typedef void (*esp_now_recv_cb_t)(const uint8_t *mac_addr, const uint8_t *data, int data_len);
-        //typedef void (*esp_now_recv_cb_t)(const esp_now_recv_info_t * esp_now_info, const uint8_t *data, int data_len);
         err = esp_now_register_recv_cb([](const esp_now_recv_info_t * espNowInfo, const uint8_t *data, int data_len){
             if(espNowInfo->src_addr == nullptr || data == nullptr || data_len <= 0)
             {
@@ -469,7 +468,7 @@ class MespNowDataParse : public eventClient
 {
     using EventSendCallBack = std::function<void(stMespNowEventSend*,bool)>;
     using EventRecvCallBack = std::function<void(stMespNowEventRecv*,bool)>;
-    using EventButtonPressCb = std::function<void(uint32_t, uint32_t, uint32_t, bool, uint32_t)>;
+    using EventButtonPressCb = std::function<void(uint32_t, uint32_t, uint32_t, bool, uint32_t, bool)>;
 public:
     MespNowDataParse() : sendCb_(new EventSendCallBack),
                          recvCb_(new EventRecvCallBack),
@@ -508,8 +507,9 @@ public:
                 uint32_t buttonNum = 0;
                 bool blongPress = 0;
                 uint32_t timernum = 0;
-                stButtonInfo::parseBttonInfo(reinterpret_cast<uint32_t>(data), &buttonNum, &blongPress, &timernum);
-                (*keyCb_)(eventId & E_EVENT_ID_BUTTON, buttonNum, dataLen, blongPress, timernum);
+                bool brelease = false;
+                stButtonInfo::parseBttonInfo(reinterpret_cast<uint32_t>(data), &buttonNum, &blongPress, &timernum, &brelease);
+                (*keyCb_)(eventId & E_EVENT_ID_BUTTON, buttonNum, dataLen, blongPress, timernum, brelease);
             }
         }
         if(eventId & E_EVENT_ID_ESP_NOW)

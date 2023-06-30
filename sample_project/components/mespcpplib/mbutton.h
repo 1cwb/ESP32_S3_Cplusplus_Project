@@ -9,13 +9,15 @@ struct stButtonInfo
 {
     uint32_t gpioNum : 7;
     bool blongPress : 1;
-    uint32_t timer : 24;
-    static void parseBttonInfo(uint32_t val, uint32_t* buttonNum, bool* longPress, uint32_t* timer)
+    uint32_t timer : 23;
+    bool bbuttonRelease : 1;
+    static void parseBttonInfo(uint32_t val, uint32_t* buttonNum, bool* longPress, uint32_t* timer, bool* bRelease)
     {
         stButtonInfo* pinfo = reinterpret_cast<stButtonInfo*>(&val);
         *buttonNum = pinfo->gpioNum;
         *longPress = pinfo->blongPress;
         *timer = pinfo->timer;
+        *bRelease = pinfo->bbuttonRelease;
     }
 };
 
@@ -205,6 +207,7 @@ public:
                     pbtinfo->gpioNum = pbutton->getGpio()->getPin();
                     pbtinfo->blongPress = pbutton->bLongPress();
                     pbtinfo->timer = pbutton->getTotalTickCount();
+                    pbtinfo->bbuttonRelease = true;
                     pbutton->setLongPress(false);
                     xQueueSend(MeventHandler::getINstance()->getQueueHandle(), &keyEvent, 20);
                     pbutton->clearTotalTickCount();
@@ -294,7 +297,7 @@ private:
 
 class MButton : public eventClient
 {
-    using EventButtonPressCb = std::function<void(uint32_t, uint32_t, uint32_t, bool, uint32_t)>;
+    using EventButtonPressCb = std::function<void(uint32_t, uint32_t, uint32_t, bool, uint32_t, bool)>;
 public:
     MButton(gpio_num_t pin,  bool loopKeyEvent = true,uint32_t longPressTimer = 100, uint32_t loopPressTimer = 20, bool bInitHighLevel = true):button_(new MprivButton(pin, loopKeyEvent, longPressTimer, loopPressTimer, bInitHighLevel)),keyCb_(new EventButtonPressCb)
     {
@@ -326,15 +329,16 @@ public:
         if(eventId & E_EVENT_ID_BUTTON)
         {
             uint32_t buttonNum = 0;
-            bool longPress = 0;
+            bool longPress = false;
             uint32_t timernum = 0;
-            stButtonInfo::parseBttonInfo(reinterpret_cast<uint32_t>(data), &buttonNum, &longPress, &timernum);
+            bool brelease= false;
+            stButtonInfo::parseBttonInfo(reinterpret_cast<uint32_t>(data), &buttonNum, &longPress, &timernum, &brelease);
 
             if(button_->getGpio()->getPin() == buttonNum)
             {
                 if(keyCb_ && *keyCb_)
                 {
-                    (*keyCb_)(eventId & E_EVENT_ID_BUTTON, buttonNum, dataLen, longPress, timernum);
+                    (*keyCb_)(eventId & E_EVENT_ID_BUTTON, buttonNum, dataLen, longPress, timernum, brelease);
                 }
             }
         }
@@ -342,6 +346,10 @@ public:
     void setButtonPressCb(const EventButtonPressCb&& keycb)
     {
         *keyCb_ = keycb;
+    }
+    uint32_t getPinNum() const
+    {
+        return button_->getGpio()->getPin();
     }
 private:
    MprivButton* button_; 
