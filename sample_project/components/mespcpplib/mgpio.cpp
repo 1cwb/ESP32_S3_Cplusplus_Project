@@ -13,6 +13,7 @@ MGpio::MGpio(gpio_num_t pin, gpio_mode_t mode, gpio_pullup_t pullUpEn, gpio_pull
     {
         printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
     }
+    installIsrService();
 }
 MGpio::~MGpio()
 {

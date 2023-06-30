@@ -10,6 +10,43 @@
 #include "mbutton.h"
 #include <list>
 
+enum MEventID
+{
+    E_UI_EVNET_ID_UPDATE,
+    E_UI_EVENT_ID_KEY_PRESSDOWN,
+    E_UI_EVENT_ID_MAX
+};
+
+struct stUIEvent
+{
+    MEventID eventId;
+    union {
+        uint32_t val;
+        uint8_t* data;
+    };
+    uint32_t dataLen;
+    std::function<void()> clean;
+};
+
+enum MUIKeyID
+{
+    E_UI_KEY_EVNET_ID_OK,
+    E_UI_KEY_EVNET_ID_BACK,
+    E_UI_KEY_EVNET_ID_UP,
+    E_UI_KEY_EVNET_ID_DOWN,
+    E_UI_KEY_EVNET_ID_LEFT,
+    E_UI_KEY_EVNET_ID_RIGHT,
+    E_UI_KEY_EVNET_ID_MAX
+};
+
+struct stUIKeyEvent
+{
+    MUIKeyID keyVal;
+    bool blongPress;
+    uint32_t timerNum;
+    bool brelease;
+};
+
 class MUicore
 {
 public:
@@ -362,9 +399,54 @@ public:
     }
     void updateUiNotify(MUiBase* ui)
     {
-        msg_->sendQueue(ui);
+        stUIEvent* event = new stUIEvent;
+        if(!event || !ui)
+        {
+            return;
+        }
+        event->eventId = E_UI_EVNET_ID_UPDATE;
+        event->data = reinterpret_cast<uint8_t*>(ui);
+        event->dataLen = 4;
+        event->clean = [event](){
+            if(event)
+            {
+                delete event;
+            }
+        };
+        msg_->sendQueue(event);
     }
-
+    void updateUiNotify(MUIKeyID keyVal, bool blongPress, uint32_t timerNum, bool brelease)
+    {
+        stUIEvent* event = new stUIEvent;
+        if(!event)
+        {
+            return;
+        }
+        stUIKeyEvent* key = new stUIKeyEvent;
+        if(! key)
+        {
+            delete event;
+            return;
+        }
+        key->keyVal = keyVal;
+        key->blongPress = blongPress;
+        key->timerNum = timerNum;
+        key->brelease = brelease;
+        event->eventId = E_UI_EVENT_ID_KEY_PRESSDOWN;
+        event->data = reinterpret_cast<uint8_t*>(key);
+        event->dataLen = 4;
+        event->clean = [event,key](){
+            if(event)
+            {
+                delete event;
+            }
+            if(key)
+            {
+                delete key;
+            }
+        };
+        msg_->sendQueue(event);
+    }
     uint32_t getPanelWidth()
     {
         if(lcd_)
@@ -388,53 +470,84 @@ public:
         }
     }
 private:
-    MUicore() : lcd_(nullptr), lcdRam_(nullptr), lcdRamBack_(nullptr), lcdRamSize_(0), msg_(new MsgQueue<MUiBase*>),foucsedUi_(nullptr)
+    MUicore() : lcd_(nullptr), lcdRam_(nullptr), lcdRamBack_(nullptr), lcdRamSize_(0), msg_(new MsgQueue<stUIEvent*>),foucsedUi_(nullptr)
     {
         static std::thread uiThread_([this](){
             bool brefreshBackGround = false;
             while(true)
             {
-                MUiBase* ui = msg_->getQueueData();
-                if(lcd_ && lcdRam_ && lcdRamBack_ && ui)
+                stUIEvent* event = msg_->getQueueData();
+                if(event && event->eventId == E_UI_EVNET_ID_UPDATE)//UPDATE ui
                 {
-                    brefreshBackGround = ui->needUpdateBackGround();
-                    if(brefreshBackGround)
+                    MUiBase* ui = reinterpret_cast<MUiBase*>(event->data);
+                    if(lcd_ && lcdRam_ && lcdRamBack_ && ui)
                     {
-                        resetPartRam(0, 0, lcd_->getWidth(), lcd_->getHeight());
-                        std::lock_guard<std::mutex> lock(uiListMutex_);
-                        for(auto& it : uiList_)
+                        brefreshBackGround = ui->needUpdateBackGround();
+                        if(brefreshBackGround)
                         {
-                            if(it->bInited())
+                            resetPartRam(0, 0, lcd_->getWidth(), lcd_->getHeight());
+                            std::lock_guard<std::mutex> lock(uiListMutex_);
+                            for(auto& it : uiList_)
                             {
-                                if(it->bfocused() && it->canBefocused())
+                                if(it->bInited())
                                 {
-                                    foucsedUi_ = it;
-                                    continue;
+                                    if(it->bfocused() && it->canBefocused())
+                                    {
+                                        foucsedUi_ = it;
+                                        continue;
+                                    }
+                                    it->updateData();
                                 }
-                                it->updateData();
                             }
                         }
+                        else
+                        {
+                            resetPartRam(0, ui->getY(), lcd_->getWidth(), ui->getHeight());
+                            ui->updateData();
+                        }
+                        if(foucsedUi_)
+                        {
+                            //setRamData(foucsedUi_->getX(),foucsedUi_->getY(),foucsedUi_->getWidth(),foucsedUi_->getHeight(),foucsedUi_->getUi(),foucsedUi_->getUiDataLen());
+                            foucsedUi_->updateData();
+                            drawFocus(foucsedUi_->getX(), foucsedUi_->getY(), foucsedUi_->getWidth(), foucsedUi_->getHeight(), TFT_RED);
+                            foucsedUi_->onFocus();
+                        }
+                        if(brefreshBackGround)
+                        {
+                            refreshFrame();;
+                        }
+                        else
+                        {
+                            refreshRange(ui->getY(),ui->getHeight());
+                        }
                     }
-                    else
+                }
+                else if(event && event->eventId == E_UI_EVENT_ID_KEY_PRESSDOWN)
+                {
+                    stUIKeyEvent* key = reinterpret_cast<stUIKeyEvent*>(event->data);
+                    switch (key->keyVal)
                     {
-                        resetPartRam(0, ui->getY(), lcd_->getWidth(), ui->getHeight());
-                        ui->updateData();
+                    case E_UI_KEY_EVNET_ID_OK:
+                        printf("key(ok)pressdown, blongPress = %d, timerNum = %lu, brelease = %d\n",key->blongPress, key->timerNum, key->brelease);
+                        break;
+                    case E_UI_KEY_EVNET_ID_UP:
+                        break;
+                    case E_UI_KEY_EVNET_ID_DOWN:
+                        break;
+                    case E_UI_KEY_EVNET_ID_LEFT:
+                        break;
+                    case E_UI_KEY_EVNET_ID_RIGHT:
+                        break;
+                    case E_UI_KEY_EVNET_ID_MAX:
+                        /* code */
+                        break;
+                    default:
+                        break;
                     }
-                    if(foucsedUi_)
-                    {
-                        //setRamData(foucsedUi_->getX(),foucsedUi_->getY(),foucsedUi_->getWidth(),foucsedUi_->getHeight(),foucsedUi_->getUi(),foucsedUi_->getUiDataLen());
-                        foucsedUi_->updateData();
-                        drawFocus(foucsedUi_->getX(), foucsedUi_->getY(), foucsedUi_->getWidth(), foucsedUi_->getHeight(), TFT_RED);
-                        foucsedUi_->onFocus();
-                    }
-                    if(brefreshBackGround)
-                    {
-                        refreshFrame();;
-                    }
-                    else
-                    {
-                        refreshRange(ui->getY(),ui->getHeight());
-                    }
+                }
+                if(event && event->clean)
+                {
+                    event->clean();
                 }
             }
         });
@@ -526,7 +639,7 @@ private:
     uint8_t* lcdRam_;
     uint8_t* lcdRamBack_;
     uint32_t lcdRamSize_;
-    MsgQueue<MUiBase*>* msg_;
+    MsgQueue<stUIEvent*>* msg_;
     MUiBase* foucsedUi_;
     std::mutex mutex_;
     std::mutex uiListMutex_;

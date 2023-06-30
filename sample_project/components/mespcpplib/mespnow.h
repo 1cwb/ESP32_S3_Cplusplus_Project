@@ -499,19 +499,6 @@ public:
             printf("Error: %s()%d get nullptr\n",__FUNCTION__,__LINE__);
             return;
         }
-
-        if (eventId & E_EVENT_ID_BUTTON)
-        {
-            if(keyCb_ && *keyCb_)
-            {
-                uint32_t buttonNum = 0;
-                bool blongPress = 0;
-                uint32_t timernum = 0;
-                bool brelease = false;
-                stButtonInfo::parseBttonInfo(reinterpret_cast<uint32_t>(data), &buttonNum, &blongPress, &timernum, &brelease);
-                (*keyCb_)(eventId & E_EVENT_ID_BUTTON, buttonNum, dataLen, blongPress, timernum, brelease);
-            }
-        }
         if(eventId & E_EVENT_ID_ESP_NOW)
         {
             uint8_t* pdataTemp = nullptr;

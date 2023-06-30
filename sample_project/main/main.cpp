@@ -497,7 +497,7 @@ extern "C" void app_main(void)
     MButton button(GPIO_NUM_45);
     MButton buttonBoot(GPIO_NUM_0);
 
-    buttonBoot.setButtonPressCb([&](uint32_t id, uint32_t buttonNum, uint32_t len, bool blongPress, uint32_t timerNum){
+    buttonBoot.setButtonPressCb([&](uint32_t id, uint32_t buttonNum, uint32_t len, bool blongPress, uint32_t timerNum, bool brelease){
             if(blongPress && timerNum >= 500 && timerNum< 510)
             {
                 stBaseCmd connectCmd;
@@ -567,7 +567,6 @@ extern "C" void app_main(void)
 #include <thread>
 #include "mledstrip.h"
 #include "mrgbcolor.h"
-#include "mbutton.h"
 #include "meventhandler.h"
 #include "mespnow.h"
 #include <iostream>
@@ -579,6 +578,7 @@ extern "C" void app_main(void)
 #include "uidriver.h"
 #include "muicore.h"
 #include "muitext.h"
+#include "keydriver.h"
 
 using namespace std;
 
@@ -590,6 +590,10 @@ extern "C" void app_main(void)
     MUicore::getInstance()->updateUiNotify(nullptr);
     MUiText text(10,10);
     text.setText("wo cao ni ma -----------------------------------------------------",TFT_RED, TFT_RED);
+    MButton button1(GPIO_NUM_0);
+    stKeyVal key;
+    key.keyEnter = button1.getPinNum();
+    keyDriver::getInstance()->remappingKey(&key);
     int32_t i = -100;
     while(true)
     {
