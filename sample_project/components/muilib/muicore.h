@@ -30,6 +30,7 @@ struct stUIEvent
 
 enum MUIKeyID
 {
+    E_UI_KEY_EVNET_ID_INVALID,
     E_UI_KEY_EVNET_ID_OK,
     E_UI_KEY_EVNET_ID_BACK,
     E_UI_KEY_EVNET_ID_UP,

@@ -22,11 +22,17 @@ public:
     }
     void remappingKey(const stKeyVal* key)
     {
-        memcpy(&key_, key, sizeof(stKeyVal));
+        memcpy(key_, key, sizeof(stKeyVal));
     }
 private:
-    keyDriver()
+    keyDriver() : key_(nullptr)
     {
+        key_ = new stKeyVal;
+        if(!key_)
+        {
+            return;
+        }
+        memset(key_, E_UI_KEY_EVNET_ID_INVALID, sizeof(stKeyVal));
         enableEvent(E_EVENT_ID_BUTTON);
         MeventHandler::getINstance()->registerClient(this);
     }
@@ -34,31 +40,39 @@ private:
     {
         disableEvent(E_EVENT_ID_BUTTON);
         MeventHandler::getINstance()->unregisterClient(this);
+        if(key_)
+        {
+            delete key_;
+        }
     }
     MUIKeyID getKeyEvent(uint32_t buttonNum)
     {
-        MUIKeyID keyVal = E_UI_KEY_EVNET_ID_MAX;
-        if(buttonNum == key_.keyEnter)
+        if(!key_)
+        {
+            return E_UI_KEY_EVNET_ID_INVALID;
+        }
+        MUIKeyID keyVal = E_UI_KEY_EVNET_ID_INVALID;
+        if(buttonNum == key_->keyEnter)
         {
             keyVal = E_UI_KEY_EVNET_ID_OK;
         }
-        else if(buttonNum == key_.keyBack)
+        else if(buttonNum == key_->keyBack)
         {
             keyVal = E_UI_KEY_EVNET_ID_BACK;
         }
-        else if(buttonNum == key_.keyLeft)
+        else if(buttonNum == key_->keyLeft)
         {
             keyVal = E_UI_KEY_EVNET_ID_LEFT;
         }
-        else if(buttonNum == key_.keyRight)
+        else if(buttonNum == key_->keyRight)
         {
             keyVal = E_UI_KEY_EVNET_ID_RIGHT;
         }
-        else if(buttonNum == key_.keyUp)
+        else if(buttonNum == key_->keyUp)
         {
             keyVal = E_UI_KEY_EVNET_ID_UP;
         }
-        else if(buttonNum == key_.keyDown)
+        else if(buttonNum == key_->keyDown)
         {
             keyVal = E_UI_KEY_EVNET_ID_DOWN;
         }
@@ -81,5 +95,5 @@ private:
         }
     }
 private:
-    stKeyVal key_;
+    stKeyVal* key_;
 };

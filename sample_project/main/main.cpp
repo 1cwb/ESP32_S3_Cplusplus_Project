@@ -588,8 +588,8 @@ extern "C" void app_main(void)
     MUicore::getInstance()->addLcd(&lcd); 
     MUicore::getInstance()->setBackGround(TFT_YELLOW);
     MUicore::getInstance()->updateUiNotify(nullptr);
-    MUiText text(10,10);
-    text.setText("wo cao ni ma -----------------------------------------------------",TFT_RED, TFT_RED);
+    MUiText* text = new MUiText(10,10);
+    text->setText("wo cao ni ma -----------------------------------------------------",TFT_RED, TFT_RED);
     MButton button1(GPIO_NUM_0);
     stKeyVal key;
     key.keyEnter = button1.getPinNum();

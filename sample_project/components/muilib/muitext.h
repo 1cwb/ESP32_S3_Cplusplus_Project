@@ -5,7 +5,7 @@
 class MUiText : public MUiBase
 {
 public:
-    MUiText(uint32_t x, uint32_t y, bool canbefocus = false)
+    MUiText(uint16_t x, uint16_t y, bool canbefocus = false)
     :MUiBase(x,y,0,0,canbefocus),tempHeight_(0),dataLen_(0),data_(nullptr),color_(TFT_RED), backcolor_(0)
     {
         memset(data_, 0, dataLen_);
