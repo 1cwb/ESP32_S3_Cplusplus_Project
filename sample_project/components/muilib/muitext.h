@@ -5,15 +5,21 @@
 class MUiText : public MUiBase
 {
 public:
-    MUiText(uint16_t x, uint16_t y, bool canbefocus = false)
-    :MUiBase(x,y,0,0,canbefocus),tempHeight_(0),dataLen_(0),data_(nullptr),color_(TFT_RED), backcolor_(0)
+    MUiText(uint16_t x, uint16_t y, bool autoRegisterIncore = false, bool canbefocus = false)
+    :MUiBase(x,y,0,0,autoRegisterIncore,canbefocus),tempHeight_(0),dataLen_(0),data_(nullptr),color_(TFT_RED), backcolor_(0)
     {
         memset(data_, 0, dataLen_);
-        MUicore::getInstance()->addToUiCore(this);
+        if(autoRegisterIncore_)
+        {
+            MUicore::getInstance()->addToUiCore(this);
+        }
     }
     ~MUiText()
     {
-        MUicore::getInstance()->removeFromUiCore(this);
+        if(autoRegisterIncore_)
+        {
+            MUicore::getInstance()->removeFromUiCore(this);
+        }
         if(data_)
         {
             delete data_;
@@ -45,6 +51,10 @@ public:
     }*/
     virtual void updateData()
     {
+        if(!data_)
+        {
+            return;
+        }
         if(backcolor_ != 0)
         {
             MUicore::getInstance()->drawString(x_, y_, reinterpret_cast<const char*>(data_), color_, backcolor_, &height_);
@@ -68,11 +78,7 @@ public:
     {
 
     }
-    virtual void pressDown(uint32_t id, uint32_t buttonNum, uint32_t len, bool blongPress, uint32_t timerNum, bool brelease)
-    {
-        
-    }
-    void setText(const char* text, uint16_t color, uint16_t backcolor = TFT_BLACK)
+    void setText(const char* text, uint32_t userlen, uint16_t color, uint16_t backcolor = TFT_BLACK)
     {
         if(data_ && dataLen_ != 0)
         {
@@ -83,19 +89,30 @@ public:
         dataLen_ = strlen(text) + 1;
         data_ = new uint8_t[dataLen_];
         memset(data_,0,dataLen_);
-        memcpy(data_,text,MIN(strlen(text),dataLen_));
+        memcpy(data_,text,MIN(strlen(text),userlen));
         color_ = color;
         backcolor_ = backcolor;
         binited_ = true;
-        MUicore::getInstance()->updateUiNotify(this);
+        if(autoRegisterIncore_)
+        {
+            MUicore::getInstance()->updateUiNotify(this);
+        }
     }
-    void setIntNum(int32_t num, uint16_t color, uint16_t backcolor = TFT_BLACK)
+    uint16_t getBackColor() const 
+    {
+        return backcolor_;
+    }
+    void setIntNum(int32_t num, uint16_t userlen, uint16_t color, uint16_t backcolor = TFT_BLACK)
     {
         int len = 12;
         char buff[len];
         memset(buff, 0, len);
         snprintf(buff, len ,num < 0 ? "-%ld" : "%ld",num);
-        setText(buff, color, backcolor);
+        setText(buff, userlen, color, backcolor);
+    }
+    const char* getStr() const
+    {
+        return reinterpret_cast<const char*> (data_);
     }
     void setXY(uint16_t x, uint16_t y)
     {
@@ -105,8 +122,11 @@ public:
         }
         x_ = x;
         y_ = y;
-        bupgradeBack_ = true;
-        MUicore::getInstance()->updateUiNotify(this);
+        if(autoRegisterIncore_)
+        {
+            bupgradeBack_ = true;
+            MUicore::getInstance()->updateUiNotify(this);
+        }
     }
 private:
     uint32_t tempHeight_;

@@ -2,21 +2,59 @@
 #include <atomic>
 #include <functional>
 
+enum MEventID
+{
+    E_UI_EVNET_ID_UPDATE,
+    E_UI_EVENT_ID_KEY_PRESSDOWN,
+    E_UI_EVENT_ID_MAX
+};
+
+struct stUIEvent
+{
+    MEventID eventId;
+    union {
+        uint32_t val;
+        uint8_t* data;
+    };
+    uint32_t dataLen;
+    std::function<void()> clean;
+};
+
+enum MUIKeyID
+{
+    E_UI_KEY_EVNET_ID_INVALID,
+    E_UI_KEY_EVNET_ID_OK,
+    E_UI_KEY_EVNET_ID_BACK,
+    E_UI_KEY_EVNET_ID_UP,
+    E_UI_KEY_EVNET_ID_DOWN,
+    E_UI_KEY_EVNET_ID_LEFT,
+    E_UI_KEY_EVNET_ID_RIGHT,
+    E_UI_KEY_EVNET_ID_MAX
+};
+
+struct stUIKeyEvent
+{
+    MUIKeyID keyVal;
+    bool blongPress;
+    uint32_t timerNum;
+    bool brelease;
+};
+
 enum EMUITYPE
 {
     E_UI_TYPE_INVALID,
     E_UI_TYPE_TEXT,
-    E_UI_TYPE_BUTTON,
+    E_UI_TYPE_ITEM,
     E_UI_TYPE_MAX
 };
 
 class MUiBase
 {
 public:
-    using MUiButtonPressCb = std::function<void(uint32_t, uint32_t, uint32_t, bool, uint32_t, bool)>;
+    using MUiButtonPressCb = std::function<void(MEventID, MUIKeyID, bool, uint32_t, bool)>;
 
-    MUiBase(uint16_t x, uint16_t y, uint16_t width, uint16_t height, bool canbeFocus = true)
-    :x_(x),y_(y),width_(width),height_(height),bfocused_(false),binited_(false),bCanfocus_(canbeFocus),bupgradeBack_(false),cb_(new MUiButtonPressCb),mid_(id++){}
+    MUiBase(uint16_t x, uint16_t y, uint16_t width, uint16_t height, bool autoRegisterIncore = true, bool canbeFocus = true)
+    :x_(x),y_(y),width_(width),height_(height),bfocused_(false),binited_(false),bCanfocus_(canbeFocus),bupgradeBack_(false),autoRegisterIncore_(autoRegisterIncore),cb_(new MUiButtonPressCb),mid_(id++){}
     virtual ~MUiBase() 
     {
         binited_ = false;
@@ -51,7 +89,13 @@ public:
     //virtual uint32_t getUiDataLen() const = 0;
     virtual void updateData() = 0;
     virtual void onFocus() = 0;
-    virtual void pressDown(uint32_t id, uint32_t buttonNum, uint32_t len, bool blongPress, uint32_t timerNum, bool brelease) = 0;
+    void pressDown(MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease)
+    {
+        if(cb_ && *cb_)
+        {
+            (*cb_)(id, key, blongPress, timerNum, brelease);
+        }
+    }
     void registerOnPressDown(const MUiButtonPressCb& cb)
     {
         if(cb_)
@@ -84,6 +128,7 @@ protected:
     bool binited_;
     bool bCanfocus_;
     bool bupgradeBack_;
+    bool autoRegisterIncore_;
     MUiButtonPressCb* cb_;
     EMUITYPE type_;
 private:

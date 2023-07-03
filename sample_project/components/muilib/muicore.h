@@ -10,42 +10,12 @@
 #include "mbutton.h"
 #include <list>
 
-enum MEventID
+enum FocusSwitch
 {
-    E_UI_EVNET_ID_UPDATE,
-    E_UI_EVENT_ID_KEY_PRESSDOWN,
-    E_UI_EVENT_ID_MAX
-};
-
-struct stUIEvent
-{
-    MEventID eventId;
-    union {
-        uint32_t val;
-        uint8_t* data;
-    };
-    uint32_t dataLen;
-    std::function<void()> clean;
-};
-
-enum MUIKeyID
-{
-    E_UI_KEY_EVNET_ID_INVALID,
-    E_UI_KEY_EVNET_ID_OK,
-    E_UI_KEY_EVNET_ID_BACK,
-    E_UI_KEY_EVNET_ID_UP,
-    E_UI_KEY_EVNET_ID_DOWN,
-    E_UI_KEY_EVNET_ID_LEFT,
-    E_UI_KEY_EVNET_ID_RIGHT,
-    E_UI_KEY_EVNET_ID_MAX
-};
-
-struct stUIKeyEvent
-{
-    MUIKeyID keyVal;
-    bool blongPress;
-    uint32_t timerNum;
-    bool brelease;
+    E_UI_FOCUS_NEXT,
+    E_UI_FOCUS_FRONT,
+    E_UI_FOCUS_LEFT,
+    E_UI_FOCUS_RIGHT
 };
 
 class MUicore
@@ -193,8 +163,8 @@ public:
                 *height += 16;
             }
             if (y > lcd_->getHeight() - 16) {
-                y = x = 0;
-                fillScreen(TFT_RED);
+                //y = x = 0;
+                //fillScreen(TFT_RED);
             }
             drawChar(x, y, *p, 1, color, color);
             x += 8;
@@ -500,11 +470,47 @@ private:
                                     it->updateData();
                                 }
                             }
+                            printf("update BackGround\n");
                         }
                         else
                         {
-                            resetPartRam(0, ui->getY(), lcd_->getWidth(), ui->getHeight());
-                            ui->updateData();
+                            printf("update range (%u,%u,%u,%u)\n",0, ui->getY(), lcd_->getWidth(), ui->getHeight());
+                            std::lock_guard<std::mutex> lock(uiListMutex_);
+                            for(auto& it : uiList_)
+                            {
+                                if(it == ui)
+                                {
+                                    if(it->bInited())
+                                    {
+                                        resetPartRam(0, ui->getY(), lcd_->getWidth(), ui->getHeight());
+                                        ui->updateData();
+                                    }
+                                }
+                                if(it->bInited())
+                                {
+                                    if(it->bfocused() && it->canBefocused())
+                                    {
+                                        foucsedUi_ = it;
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                        if(!foucsedUi_)
+                        {
+                            std::lock_guard<std::mutex> lock(uiListMutex_);
+                            for(auto& it : uiList_)
+                            {
+                                if(it->canBefocused())
+                                {
+                                    foucsedUi_ = it;
+                                    break;
+                                }
+                            }
+                            if(foucsedUi_ && foucsedUi_->canBefocused())
+                            {
+                                foucsedUi_->setFocused(true);
+                            }
                         }
                         if(foucsedUi_)
                         {
@@ -530,10 +536,17 @@ private:
                     {
                     case E_UI_KEY_EVNET_ID_OK:
                         printf("key(ok)pressdown, blongPress = %d, timerNum = %lu, brelease = %d\n",key->blongPress, key->timerNum, key->brelease);
+                        if(foucsedUi_)
+                        {
+                            foucsedUi_->pressDown(E_UI_EVENT_ID_KEY_PRESSDOWN, key->keyVal, key->blongPress, key->timerNum, key->brelease);
+                        }
+                        switchFocus(E_UI_FOCUS_NEXT);
                         break;
                     case E_UI_KEY_EVNET_ID_UP:
+                        switchFocus(E_UI_FOCUS_FRONT);
                         break;
                     case E_UI_KEY_EVNET_ID_DOWN:
+                        switchFocus(E_UI_FOCUS_NEXT);
                         break;
                     case E_UI_KEY_EVNET_ID_LEFT:
                         break;
@@ -633,6 +646,71 @@ private:
         else
         {
             lcd_->sendData(lcdRam_, lcdRamSize_);
+        }
+    }
+    void switchFocus(FocusSwitch eswitch)
+    {
+        bool skipNoFocusItem = false;
+        switch (eswitch)
+        {
+            case E_UI_FOCUS_NEXT:
+            {
+                std::lock_guard<std::mutex> lock(uiListMutex_);
+                for(auto it = uiList_.begin(); it != uiList_.end();)
+                {
+                    if(*(it++) == foucsedUi_ || skipNoFocusItem)
+                    {
+                        if(it == uiList_.end())
+                        {
+                            return;
+                        }
+                        skipNoFocusItem = true;
+                        if(it != uiList_.end() && (*it)->canBefocused())
+                        {
+                            foucsedUi_->setFocused(false);
+                            updateUiNotify(foucsedUi_);//old
+                            foucsedUi_ = *it;
+                            foucsedUi_ ->setFocused(true);
+                            updateUiNotify(foucsedUi_);//new
+                            return;
+                        }
+                    }
+                }
+                break;
+            }
+            case E_UI_FOCUS_FRONT:
+            {
+                std::lock_guard<std::mutex> lock(uiListMutex_);
+                for(auto it = uiList_.rbegin(); it != uiList_.rend();)
+                {
+                    if(*(it++) == foucsedUi_ || skipNoFocusItem)
+                    {
+                        if(it == uiList_.rend())
+                        {
+                            return;
+                        }
+                        skipNoFocusItem = true;
+                        if(it != uiList_.rend() && (*it)->canBefocused())
+                        {
+                            foucsedUi_->setFocused(false);
+                            updateUiNotify(foucsedUi_);//old
+                            foucsedUi_ = *it;
+                            foucsedUi_ ->setFocused(true);
+                            updateUiNotify(foucsedUi_);//new
+                            return;
+                        }
+                    }
+                }
+                break;
+            }
+            case E_UI_FOCUS_LEFT:
+
+                break;
+            case E_UI_FOCUS_RIGHT:
+
+                return;
+            default:
+                break;
         }
     }
 private:

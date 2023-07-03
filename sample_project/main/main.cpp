@@ -578,6 +578,7 @@ extern "C" void app_main(void)
 #include "uidriver.h"
 #include "muicore.h"
 #include "muitext.h"
+#include "muiItem.h"
 #include "keydriver.h"
 
 using namespace std;
@@ -588,8 +589,32 @@ extern "C" void app_main(void)
     MUicore::getInstance()->addLcd(&lcd); 
     MUicore::getInstance()->setBackGround(TFT_YELLOW);
     MUicore::getInstance()->updateUiNotify(nullptr);
-    MUiText* text = new MUiText(10,10);
-    text->setText("wo cao ni ma -----------------------------------------------------",TFT_RED, TFT_RED);
+    MUiItem item(10,10,120,30);
+    item.setBackGround(TFT_GREEN);
+    item.setText("item1",TFT_RED);
+    //item.setFocused(true);
+    item.setCanbefocus(false);
+    item.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
+
+    });
+    
+        MUiItem item1(10,44,120,30);
+    item1.setBackGround(TFT_GREEN);
+    item1.setText("item2",TFT_RED);
+    item1.setCanbefocus(false);
+
+        MUiItem item2(10,78,120,30);
+    item2.setBackGround(TFT_GREEN);
+    item2.setText("item3",TFT_RED);
+
+        MUiItem item3(10,110,120,30);
+    item3.setBackGround(TFT_GREEN);
+    item3.setText("item4",TFT_RED);
+
+    MUiText timerText(10,144,true,false);
+    timerText.setText("TextTest", strlen("TextTest")+1, TFT_BLACK);
+
+
     MButton button1(GPIO_NUM_0);
     stKeyVal key;
     key.keyEnter = button1.getPinNum();
@@ -602,8 +627,9 @@ extern "C" void app_main(void)
         {
             for(int j = 0; j < 320 - 16; j+=10)
             {
-                text.setIntNum(i++, TFT_PINK);
-                text.setXY(x,j);
+                item.setIntNum(i, TFT_PINK+i);
+                item.setXY(x,j);
+                i++;
                 vTaskDelay(100/portTICK_PERIOD_MS);
             }
         }*/
