@@ -3,7 +3,7 @@
 #include "sdkconfig.h"
 #include "mgpio.h"
 #include "meventhandler.h"
-#include "mtimer.h"
+#include "mesptimer.h"
 
 struct stButtonInfo
 {
@@ -169,9 +169,9 @@ public:
         }
         if(eventId & E_EVENT_ID_KEY)
         {
-            if(!timer_.started())
+            if(!stftimer_.isActive())
             {
-                timer_.start();
+                stftimer_.start(10000, false);
             }
             MprivButton* pbutton = reinterpret_cast<MprivButton*>(data);
             if(pbutton->getGpio()->getLevel() == 0)
@@ -248,20 +248,18 @@ public:
     {
         return &buttonList_;
     }
-    MTimer* getTimer()
+    MEspTimer* getSfTimer()
     {
-        return &timer_;
+        return &stftimer_;
     }
 private:
-    MprivButtonParse()
+    MprivButtonParse() : stftimer_("bttimer")
     {
         enableEvent(E_EVENT_ID_KEY);
         MeventHandler::getINstance()->registerClient(this);
-        timer_.init(1000000);//1mhz 1us/tick
-        timer_.registerEventCallbacks([](gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx)->bool{
-            MprivButtonParse* pthis = reinterpret_cast<MprivButtonParse*>(user_ctx);
-            auto it = pthis->getButtonList()->begin();
-            for(; it != pthis->getButtonList()->end(); it++)
+        stftimer_.registerOnTimerCallback([this](){
+            auto it = this->getButtonList()->begin();
+            for(; it != this->getButtonList()->end(); it++)
             {
                 if((*it)->getGpio()->getLevel() == 0)
                 {
@@ -273,26 +271,27 @@ private:
                     xQueueSendFromISR(MeventHandler::getINstance()->getQueueHandle(), &keyEvent, &xTaskWokenByReceive);
                 }
             }
-            if(it == pthis->getButtonList()->end())
+            if(it == this->getButtonList()->end())
             {
-                pthis->getTimer()->stop();
+                if(stftimer_.isActive())
+                {
+                    this->getSfTimer()->stop();
+                }
             }
             return true;
-        }, this);
-        timer_.enableAlarm(10000, 0, true);//10ms
-        timer_.enable();
+        });
     }
     virtual ~MprivButtonParse()
     {
         MeventHandler::getINstance()->unregisterClient(this);
-        timer_.stop();
-        timer_.disableAlarm();
-        timer_.disable();
-        timer_.deinit();
+        if(stftimer_.isActive())
+        {
+            stftimer_.stop();
+        }
     }
 private:
     std::list<MprivButton*> buttonList_;
-    MTimer timer_;
+    MEspTimer stftimer_;
 };
 
 class MButton : public eventClient

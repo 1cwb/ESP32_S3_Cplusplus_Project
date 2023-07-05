@@ -62,6 +62,10 @@ public:
     }
     void onTimer()
     {
+        if(bstartOnce_)
+        {
+            bstarted_ = false;
+        }
         if(onTimerCb_ && *onTimerCb_)
         {
             (*onTimerCb_)();
