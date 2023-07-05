@@ -616,8 +616,18 @@ extern "C" void app_main(void)
 
 
     MButton button1(GPIO_NUM_0);
+    MButton buttonUP(GPIO_NUM_4);
+    MButton buttonDown(GPIO_NUM_3);
+    MButton buttonMID(GPIO_NUM_5);
+    MButton buttonx(GPIO_NUM_1);
+    MButton buttonu(GPIO_NUM_2);
+    MButton button6(GPIO_NUM_6);
+    MButton button7(GPIO_NUM_7);
+    MButton button8(GPIO_NUM_8);
     stKeyVal key;
     key.keyEnter = button1.getPinNum();
+    key.keyUp = buttonx.getPinNum();
+    key.keyDown = buttonu.getPinNum();
     keyDriver::getInstance()->remappingKey(&key);
     int32_t i = -100;
     while(true)
@@ -635,4 +645,27 @@ extern "C" void app_main(void)
         }*/
     }
 }
+#endif
+
+#if 0
+#include "mbutton.h"
+using namespace std;
+
+extern "C" void app_main(void)
+{
+    MButton button1(GPIO_NUM_0);
+    MButton buttonUP(GPIO_NUM_4);
+    MButton buttonDown(GPIO_NUM_3);
+    MButton buttonMID(GPIO_NUM_5);
+    MButton buttonx(GPIO_NUM_1);
+    MButton buttonu(GPIO_NUM_2);
+    MButton button6(GPIO_NUM_6);
+    MButton button7(GPIO_NUM_7);
+    MButton button8(GPIO_NUM_8);
+    while(true)
+    {
+        vTaskDelay(20/portTICK_PERIOD_MS);
+    }
+}
+
 #endif

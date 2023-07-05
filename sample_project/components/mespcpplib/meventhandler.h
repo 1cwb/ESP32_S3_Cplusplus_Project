@@ -147,7 +147,7 @@ private:
     }
     ~MeventHandler()
     {
-        vSemaphoreDelete(mespnowQueue_);
+        vQueueDelete(mespnowQueue_);
     }
 private:
     static const int ESPNOW_QUEUE_SIZE = 50;
