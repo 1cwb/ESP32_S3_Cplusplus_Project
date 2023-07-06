@@ -594,7 +594,7 @@ extern "C" void app_main(void)
     item.setText("item1",TFT_RED);
     //item.setFocused(true);
     item.setCanbefocus(false);
-    item.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
+    item.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, bool bdoubleClick, uint32_t timerNum, bool brelease){
 
     });
     

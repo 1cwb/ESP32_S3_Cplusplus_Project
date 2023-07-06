@@ -86,12 +86,8 @@ private:
         }
         if(eventId & E_EVENT_ID_BUTTON)
         {
-            uint32_t buttonNum = 0;
-            bool longPress = false;
-            uint32_t timernum = 0;
-            bool brelease= false;
-            stButtonInfo::parseBttonInfo(reinterpret_cast<uint32_t>(data), &buttonNum, &longPress, &timernum, &brelease);
-            MUicore::getInstance()->updateUiNotify(getKeyEvent(buttonNum), longPress, timernum, brelease);
+            stButtonInfo* btinfo = reinterpret_cast<stButtonInfo*>(data);
+            MUicore::getInstance()->updateUiNotify(getKeyEvent(btinfo->gpioNum), btinfo->blongPress, btinfo->bdoubleClick, btinfo->timer, btinfo->bbuttonRelease);
         }
     }
 private:

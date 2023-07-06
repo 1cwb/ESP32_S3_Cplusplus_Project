@@ -4,7 +4,6 @@
 #include "madc.h"
 class MRocker
 {
-    using EventButtonPressCb = std::function<void(uint32_t, uint32_t, uint32_t, bool, uint32_t, bool)>;
 public:
     MRocker(gpio_num_t gpioy, gpio_num_t gpiox, gpio_num_t btNum, adc_unit_t unitID = ADC_UNIT_1)
     {
@@ -65,7 +64,7 @@ public:
     }
     void setButtonPressCb(const EventButtonPressCb&& cb)
     {
-        bt->setButtonPressCb(std::move(cb));
+        bt->registerEventCb(std::move(cb));
     }
 private:
     MAdc* adcy;

@@ -386,7 +386,7 @@ public:
         };
         msg_->sendQueue(event);
     }
-    void updateUiNotify(MUIKeyID keyVal, bool blongPress, uint32_t timerNum, bool brelease)
+    void updateUiNotify(MUIKeyID keyVal, bool blongPress, bool bdoubleClick, uint32_t timerNum, bool brelease)
     {
         stUIEvent* event = new stUIEvent;
         if(!event)
@@ -403,6 +403,7 @@ public:
         key->blongPress = blongPress;
         key->timerNum = timerNum;
         key->brelease = brelease;
+        key->bdoubleClick = bdoubleClick;
         event->eventId = E_UI_EVENT_ID_KEY_PRESSDOWN;
         event->data = reinterpret_cast<uint8_t*>(key);
         event->dataLen = 4;
@@ -538,7 +539,7 @@ private:
                         printf("key(ok)pressdown, blongPress = %d, timerNum = %lu, brelease = %d\n",key->blongPress, key->timerNum, key->brelease);
                         if(foucsedUi_)
                         {
-                            foucsedUi_->pressDown(E_UI_EVENT_ID_KEY_PRESSDOWN, key->keyVal, key->blongPress, key->timerNum, key->brelease);
+                            foucsedUi_->pressDown(E_UI_EVENT_ID_KEY_PRESSDOWN, key->keyVal, key->blongPress, key->bdoubleClick, key->timerNum, key->brelease);
                         }
                         switchFocus(E_UI_FOCUS_NEXT);
                         break;
