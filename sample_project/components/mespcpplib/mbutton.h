@@ -9,7 +9,7 @@
 
 #define TICKS_INTERVAL   5  //1tick = 5ms
 #define DEBOUNCE_TICKS   2  //2tick
-#define SHORT_TICKS      36 // 180/5 short press time = 180ms
+#define SHORT_TICKS      24 // 120/5 short press time = 120ms
 #define LONG_TICKS       300 //1500ms/5
 #define SERIAL_TICKS     4   //20 ms for long press hold
 
@@ -306,7 +306,7 @@ private:
                     case 3:
                         if(it->getButtonLevel() != it->getActiveLevel())
                         {
-                            if(it->getTicks() < 36)
+                            if(it->getTicks() < SHORT_TICKS)
                             {
                                 it->setTicks(0);
                                 it->setState(2);
