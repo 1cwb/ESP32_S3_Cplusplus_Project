@@ -541,13 +541,22 @@ private:
                         {
                             foucsedUi_->pressDown(E_UI_EVENT_ID_KEY_PRESSDOWN, key->keyVal, key->blongPress, key->bdoubleClick, key->timerNum, key->brelease);
                         }
-                        switchFocus(E_UI_FOCUS_NEXT);
+                        if(!key->blongPress && !key->bdoubleClick && key->brelease)
+                        {
+                            switchFocus(E_UI_FOCUS_NEXT);
+                        }
                         break;
                     case E_UI_KEY_EVNET_ID_UP:
-                        switchFocus(E_UI_FOCUS_FRONT);
+                        if(!key->blongPress && !key->bdoubleClick && key->brelease)
+                        {
+                            switchFocus(E_UI_FOCUS_FRONT);
+                        }
                         break;
                     case E_UI_KEY_EVNET_ID_DOWN:
-                        switchFocus(E_UI_FOCUS_NEXT);
+                        if(!key->blongPress && !key->bdoubleClick && key->brelease)
+                        {
+                            switchFocus(E_UI_FOCUS_NEXT);
+                        }
                         break;
                     case E_UI_KEY_EVNET_ID_LEFT:
                         break;
