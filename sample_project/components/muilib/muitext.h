@@ -82,11 +82,9 @@ public:
     {
         if(binited_ && bCanfocus_ && bfocused_)
         {
-            /*MUicore::getInstance()->drawFocus();
-                    drawLine(x, y, w, 2, color);
-            drawLine(x_, y_, 2, h, color);
-            drawLine(x_, y_+h-2, w, 2, color);
-            drawLine(x_+ Weight-2, y, 2, h, color);*/
+            //printf("draw focus x = %u, y = %u, width = %lu height = %u\n",x_,y_,MUicore::getInstance()->getPanelWidth(),height_);
+            MUicore::getInstance()->drawLine(0, y_, MUicore::getInstance()->getPanelWidth(), 2, focusColor_);
+            MUicore::getInstance()->drawLine(0, y_ + height_ - 2, MUicore::getInstance()->getPanelWidth(), 2, focusColor_);
         }
     }
     void setText(const char* text, uint32_t userlen, uint16_t color, uint16_t backcolor = TFT_BLACK)

@@ -582,6 +582,7 @@ extern "C" void app_main(void)
 #include "muiItem.h"
 #include "keydriver.h"
 #include "mrgbcolor.h"
+#include "muiprogress.h"
 
 using namespace std;
 
@@ -622,9 +623,10 @@ extern "C" void app_main(void)
     item3.setBackGround(TFT_GREEN);
     item3.setText("item4",TFT_RED);
 
-    MUiText timerText(10,144,true,false);
+    MUiText timerText(10,144,true,true);
     timerText.setText("TextTest", strlen("TextTest")+1, TFT_BLACK);
- 
+    MUIProgress progressBar(0,200,20,120);
+
     MButton buttonBoot(GPIO_NUM_0);
     MButton buttonUP(GPIO_NUM_1);
     MButton buttonDown(GPIO_NUM_2);
@@ -635,7 +637,9 @@ extern "C" void app_main(void)
     MButton buttonReset(GPIO_NUM_8);
     //btinfo->blongPress, btinfo->bdoubleClick, btinfo->bbuttonRelease ,btinfo->timer
     buttonReset.registerEventCb([&](uint32_t pin, bool blongPress, bool brelease, uint32_t holdtimer){
+        static int32_t i = 0;
         printf("button %lu prees, blongPress(%d),brelease(%d)holdtimer(%lu)\n", pin, blongPress,brelease,holdtimer);
+        progressBar.setVal(i++);
     });
     stKeyVal key;
     key.keyEnter = buttonMID.getPinNum();
@@ -658,27 +662,4 @@ extern "C" void app_main(void)
         vTaskDelay(1000/portTICK_PERIOD_MS);
     }
 }
-#endif
-
-#if 0
-#include "mbutton.h"
-using namespace std;
-
-extern "C" void app_main(void)
-{
-    MButton button1(GPIO_NUM_0);
-    MButton buttonUP(GPIO_NUM_4);
-    MButton buttonDown(GPIO_NUM_3);
-    MButton buttonMID(GPIO_NUM_5);
-    MButton buttonx(GPIO_NUM_1);
-    MButton buttonu(GPIO_NUM_2);
-    MButton button6(GPIO_NUM_6);
-    MButton button7(GPIO_NUM_7);
-    MButton button8(GPIO_NUM_8);
-    while(true)
-    {
-        vTaskDelay(20/portTICK_PERIOD_MS);
-    }
-}
-
 #endif

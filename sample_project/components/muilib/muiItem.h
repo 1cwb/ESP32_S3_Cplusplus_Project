@@ -54,6 +54,48 @@ public:
             MUicore::getInstance()->updateUiNotify(this);
         }
     }
+    void setProgress(uint16_t color, uint32_t val, bool bhori)
+    {
+        uint16_t colorTemp = (color >> 8) | (color << 8);
+        uint32_t len = dataLen_/MUicore::getInstance()->getPixelBytes();
+        uint16_t* dataTemp = reinterpret_cast<uint16_t*> (data_);
+        if(bhori)
+        {
+            val =  (val*width_ /100);
+            for(int32_t j = 0; j < len; j+=width_)
+            {
+                for(int32_t i = 0; i < val; i++)
+                {
+                    dataTemp[j+i] = colorTemp;
+                }
+            }
+        }
+        else
+        {
+            val =  (val*height_ /100);
+            val *= width_;
+            if(val > len)
+            {
+                val = len;
+            }
+            printf("len = %lu\n",len);
+            printf("val = %lu\n",val);
+            printf("val*width_ = %lu\n",val*width_);
+            for(int32_t j = len - 1; j >= static_cast<int32_t>(len - val); j--)
+            {
+                //for(int32_t i = 0; i < val; i++)
+                {
+                    //printf("j = %ld\n",j);
+                    dataTemp[j] = colorTemp;
+                }
+            }
+        }
+        binited_ = true;
+        if(autoRegisterIncore_)
+        {
+            MUicore::getInstance()->updateUiNotify(this);
+        }
+    }
     void setBackGround(const uint8_t* picture, uint32_t len)
     {
         /*uint16_t colorTemp = (color >> 8) | (color << 8);
