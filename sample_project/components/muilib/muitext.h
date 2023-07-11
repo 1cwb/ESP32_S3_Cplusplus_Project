@@ -78,6 +78,17 @@ public:
     {
 
     }
+    virtual void drawFocus()
+    {
+        if(binited_ && bCanfocus_ && bfocused_)
+        {
+            /*MUicore::getInstance()->drawFocus();
+                    drawLine(x, y, w, 2, color);
+            drawLine(x_, y_, 2, h, color);
+            drawLine(x_, y_+h-2, w, 2, color);
+            drawLine(x_+ Weight-2, y, 2, h, color);*/
+        }
+    }
     void setText(const char* text, uint32_t userlen, uint16_t color, uint16_t backcolor = TFT_BLACK)
     {
         if(data_ && dataLen_ != 0)

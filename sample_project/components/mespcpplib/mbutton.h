@@ -9,19 +9,18 @@
 
 #define TICKS_INTERVAL   5  //1tick = 5ms
 #define DEBOUNCE_TICKS   2  //2tick
-#define SHORT_TICKS      24 // 120/5 short press time = 120ms
+#define SHORT_TICKS      20 // 120/5 short press time = 120ms
 #define LONG_TICKS       300 //1500ms/5
 #define SERIAL_TICKS     4   //20 ms for long press hold
 
 
-using EventButtonPressCb = std::function<void(uint32_t, bool, bool, bool, uint32_t)>;
+using EventButtonPressCb = std::function<void(uint32_t, bool, bool, uint32_t)>;
 
 struct stButtonInfo
 {
     uint32_t gpioNum : 7;
     bool blongPress : 1;
-    bool bdoubleClick : 1;
-    uint32_t timer : 22;
+    uint32_t timer : 23;
     bool bbuttonRelease : 1;
     void* ptr;
 };
@@ -42,7 +41,6 @@ public:
         longPressTicks_(longPressTicks),
         shortPressTicks_(shortPressTicks),
         longPressHoldCnt_(0),
-        repeat_(0),
         state_(0),
         debounceCnt_(0),
         activeLevel_(activeLevel),
@@ -76,7 +74,6 @@ public:
     uint16_t getLongPressTicks() const {return longPressTicks_;}
     uint16_t getShortPressTicks() const {return shortPressTicks_;}
     uint16_t getLongPressHoldCnt() const {return longPressHoldCnt_;}
-    uint8_t  getRepeat() const {return repeat_;} 
     uint8_t  getState() const {return state_;}
     uint16_t getDebounceCnt() const {return debounceCnt_;}
     uint16_t getActiveLevel() const {return activeLevel_;}
@@ -84,7 +81,6 @@ public:
     eButtonType getType() const {return type_;}
 
     void setTicks(uint16_t ticks) {ticks_ = ticks;}
-    void setRepeat(uint8_t repet) {repeat_ = repet;}
     void setState(uint8_t state) {state_ = state;}
     void setButtonLevel(uint8_t level) {buttonLevel_ = level;}
     void setDebounceCnt(uint16_t count) {debounceCnt_ = count;}
@@ -98,11 +94,11 @@ public:
             *cb_ = std::move(cb);
         }
     }
-    void runCb(uint32_t buttonNum, bool blongPress, bool bdoubleClick, bool brelease, uint32_t time)
+    void runCb(uint32_t buttonNum, bool blongPress, bool brelease, uint32_t time)
     {
         if(cb_ && *cb_)
         {
-            (*cb_)(buttonNum, blongPress, bdoubleClick, brelease, time);
+            (*cb_)(buttonNum, blongPress, brelease, time);
         }
     }
 private:
@@ -113,7 +109,6 @@ private:
     uint16_t longPressTicks_;
     uint16_t shortPressTicks_;
     uint16_t longPressHoldCnt_;
-    uint8_t  repeat_;
     uint8_t  state_ : 3;
     uint8_t  debounceCnt_ : 3;
     uint8_t  activeLevel_ : 1;
@@ -215,7 +210,6 @@ private:
                         };
                         xQueueSend(MeventHandler::getINstance()->getQueueHandle(), &keyEvent, 20);
                         it->setTicks(0);
-                        it->setRepeat(1);
                         it->setState(1);
                     }
                     else
@@ -227,12 +221,10 @@ private:
                     if(it->getButtonLevel() != it->getActiveLevel())
                     {
                         //button release
-
                         stButtonInfo* pbtinfo = reinterpret_cast<stButtonInfo*>(malloc(sizeof(stButtonInfo)));
                         keyEvent.data = reinterpret_cast<uint8_t*>(pbtinfo);
                         pbtinfo->gpioNum = it->getGpio()->getPin();
                         pbtinfo->blongPress = false;
-                        pbtinfo->bdoubleClick = false;
                         pbtinfo->bbuttonRelease = true;
                         pbtinfo->timer = it->getTicks()*TICKS_INTERVAL;
                         pbtinfo->ptr = reinterpret_cast<void*>(it);
@@ -244,7 +236,7 @@ private:
                         };
                         xQueueSend(MeventHandler::getINstance()->getQueueHandle(), &keyEvent, 20);
                         it->setTicks(0);
-                        it->setState(2);
+                        it->setState(0);
                     }
                     else if(it->getTicks() > it->getLongPressTicks())
                     {
@@ -253,7 +245,6 @@ private:
                         keyEvent.data = reinterpret_cast<uint8_t*>(pbtinfo);
                         pbtinfo->gpioNum = it->getGpio()->getPin();
                         pbtinfo->blongPress = true;
-                        pbtinfo->bdoubleClick = false;
                         pbtinfo->timer = it->getLongPressHoldCnt()*TICKS_INTERVAL;
                         pbtinfo->bbuttonRelease = false;
                         pbtinfo->ptr = reinterpret_cast<void*>(it);
@@ -267,56 +258,6 @@ private:
                         it->setState(5);
                     }
                     break;
-                case 2:
-                    if(it->getButtonLevel() == it->getActiveLevel())
-                    {
-                        //button repeat dwon
-                        it->setRepeat(it->getRepeat()+1);
-                        it->setTicks(0);
-                        it->setState(3);
-                    }
-                    else if(it->getTicks() > it->getShortPressTicks())
-                    {
-                        if(it->getRepeat() == 1)
-                        {
-                            //signel click
-                        }
-                        else if(it->getRepeat() == 2)
-                        {
-                            //button double click and release
-                            stButtonInfo* pbtinfo = reinterpret_cast<stButtonInfo*>(malloc(sizeof(stButtonInfo)));
-                            keyEvent.data = reinterpret_cast<uint8_t*>(pbtinfo);
-                            pbtinfo->gpioNum = it->getGpio()->getPin();
-                            pbtinfo->blongPress = false;
-                            pbtinfo->bdoubleClick = true;
-                            pbtinfo->timer = 0;
-                            pbtinfo->bbuttonRelease = true;
-                            pbtinfo->ptr = reinterpret_cast<void*>(it);
-                            keyEvent.clean = [pbtinfo](void* p){
-                                if(pbtinfo)
-                                {
-                                    free(pbtinfo);
-                                }
-                            };
-                            xQueueSend(MeventHandler::getINstance()->getQueueHandle(), &keyEvent, 20);
-                        }
-                        it->setState(0);
-                    }
-                    break;
-                    case 3:
-                        if(it->getButtonLevel() != it->getActiveLevel())
-                        {
-                            if(it->getTicks() < SHORT_TICKS)
-                            {
-                                it->setTicks(0);
-                                it->setState(2);
-                            }
-                            else 
-                            {
-                                it->setState(0);
-                            }
-                        }
-                        break;
                     case 5:
                         if(it->getButtonLevel() == it->getActiveLevel())
                         {
@@ -329,7 +270,6 @@ private:
                                 keyEvent.data = reinterpret_cast<uint8_t*>(pbtinfo);
                                 pbtinfo->gpioNum = it->getGpio()->getPin();
                                 pbtinfo->blongPress = true;
-                                pbtinfo->bdoubleClick = false;
                                 pbtinfo->timer = it->getLongPressHoldCnt()*TICKS_INTERVAL*4;
                                 pbtinfo->bbuttonRelease = false;
                                 pbtinfo->ptr = reinterpret_cast<void*>(it);
@@ -349,8 +289,7 @@ private:
                             keyEvent.data = reinterpret_cast<uint8_t*>(pbtinfo);
                             pbtinfo->gpioNum = it->getGpio()->getPin();
                             pbtinfo->blongPress = true;
-                            pbtinfo->bdoubleClick = false;
-                            pbtinfo->timer = it->getLongPressHoldCnt()*TICKS_INTERVAL;
+                            pbtinfo->timer = it->getLongPressHoldCnt()*TICKS_INTERVAL*4;
                             pbtinfo->bbuttonRelease = true;
                             pbtinfo->ptr = reinterpret_cast<void*>(it);
                             keyEvent.clean = [pbtinfo](void* p){
@@ -361,6 +300,7 @@ private:
                             };
                             xQueueSend(MeventHandler::getINstance()->getQueueHandle(), &keyEvent, 20);
                             it->setState(0);
+                            it->setTicks(0);
                             it->setLongPressHoldCnt(0);
                         }
                         break;
@@ -401,7 +341,8 @@ private:
 
             if(bt)
             {
-                bt->runCb(btinfo->gpioNum, btinfo->blongPress, btinfo->bdoubleClick, btinfo->bbuttonRelease ,btinfo->timer);
+                //printf("button %d prees, blongPress(%d),brelease(%d)holdtimer(%d)\n", btinfo->gpioNum, btinfo->blongPress, btinfo->bbuttonRelease ,btinfo->timer);
+                bt->runCb(btinfo->gpioNum, btinfo->blongPress, btinfo->bbuttonRelease ,btinfo->timer);
             }
         }
     }

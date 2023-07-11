@@ -91,6 +91,17 @@ public:
     {
 
     }
+    virtual void drawFocus()
+    {
+        if(binited_ && bCanfocus_ && bfocused_)
+        {
+            //MUicore::getInstance()->drawLine(x_, y_, width_, 2, focusColor_);
+            //MUicore::getInstance()->drawLine(x_, y_, 2, height_, focusColor_);
+            //MUicore::getInstance()->drawLine(x_, y_+height_-2, width_, 2, focusColor_);
+            //MUicore::getInstance()->drawLine(x_+ height_-2, y_, 2, height_, focusColor_);
+            MUicore::getInstance()->drawFocus(x_, y_, width_, height_, focusColor_);
+        }
+    }
     void setText(const char* text, uint16_t color, uint16_t backcolor = TFT_BLACK)
     {
         if(ptext_)

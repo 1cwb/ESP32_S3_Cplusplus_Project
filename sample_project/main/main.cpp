@@ -567,6 +567,7 @@ extern "C" void app_main(void)
 #include <thread>
 #include "mledstrip.h"
 #include "mrgbcolor.h"
+#include "mledstrip.h"
 #include "meventhandler.h"
 #include "mespnow.h"
 #include <iostream>
@@ -580,11 +581,15 @@ extern "C" void app_main(void)
 #include "muitext.h"
 #include "muiItem.h"
 #include "keydriver.h"
+#include "mrgbcolor.h"
 
 using namespace std;
 
 extern "C" void app_main(void)
 {
+    LedStrip ledStrip;
+    ledStrip.init();
+    ledStrip.setRGBAndUpdate(RGB_COLOR_BLACK);
     LcdDriver lcd;
     MUicore::getInstance()->addLcd(&lcd); 
     MUicore::getInstance()->setBackGround(TFT_YELLOW);
@@ -592,20 +597,26 @@ extern "C" void app_main(void)
     MUiItem item(10,10,120,30);
     item.setBackGround(TFT_GREEN);
     item.setText("item1",TFT_RED);
-    //item.setFocused(true);
-    item.setCanbefocus(false);
-    item.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, bool bdoubleClick, uint32_t timerNum, bool brelease){
-
+    item.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
+        ledStrip.setRGBAndUpdate(RGB_COLOR_RED);
+        printf("key press\n");
     });
     
         MUiItem item1(10,44,120,30);
     item1.setBackGround(TFT_GREEN);
     item1.setText("item2",TFT_RED);
-    item1.setCanbefocus(false);
+        item1.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
+        ledStrip.setRGBAndUpdate(RGB_COLOR_YELLOW);
+        printf("key pres1s\n");
+    });
 
         MUiItem item2(10,78,120,30);
     item2.setBackGround(TFT_GREEN);
     item2.setText("item3",TFT_RED);
+    item2.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
+        ledStrip.setRGBAndUpdate(RGB_COLOR_GREEN);
+        printf("key pre2ss\n");
+    });
 
         MUiItem item3(10,110,120,30);
     item3.setBackGround(TFT_GREEN);
@@ -613,36 +624,38 @@ extern "C" void app_main(void)
 
     MUiText timerText(10,144,true,false);
     timerText.setText("TextTest", strlen("TextTest")+1, TFT_BLACK);
-
-
-    MButton button1(GPIO_NUM_0);
-    MButton buttonUP(GPIO_NUM_4);
-    MButton buttonDown(GPIO_NUM_3);
-    MButton buttonMID(GPIO_NUM_5);
-    MButton buttonx(GPIO_NUM_1);
-    MButton buttonu(GPIO_NUM_2);
-    MButton button6(GPIO_NUM_6);
-    MButton button7(GPIO_NUM_7);
-    MButton button8(GPIO_NUM_8);
+ 
+    MButton buttonBoot(GPIO_NUM_0);
+    MButton buttonUP(GPIO_NUM_1);
+    MButton buttonDown(GPIO_NUM_2);
+    MButton buttonMID(GPIO_NUM_6);
+    MButton buttonLeft(GPIO_NUM_4);
+    MButton buttonRight(GPIO_NUM_5);
+    MButton buttonSet(GPIO_NUM_7);
+    MButton buttonReset(GPIO_NUM_8);
+    //btinfo->blongPress, btinfo->bdoubleClick, btinfo->bbuttonRelease ,btinfo->timer
+    buttonReset.registerEventCb([&](uint32_t pin, bool blongPress, bool brelease, uint32_t holdtimer){
+        printf("button %lu prees, blongPress(%d),brelease(%d)holdtimer(%lu)\n", pin, blongPress,brelease,holdtimer);
+    });
     stKeyVal key;
-    key.keyEnter = button1.getPinNum();
-    key.keyUp = buttonx.getPinNum();
-    key.keyDown = buttonu.getPinNum();
+    key.keyEnter = buttonMID.getPinNum();
+    key.keyUp = buttonUP.getPinNum();
+    key.keyDown = buttonDown.getPinNum();
     keyDriver::getInstance()->remappingKey(&key);
-    int32_t i = -100;
+    time_t now;
+    char strftime_buf[64];
+    memset(strftime_buf,0,sizeof(strftime_buf));
+    struct tm timeinfo;
+    // 将时区设置为中国标准时间
+    setenv("TZ", "CST-8", 1);
+    tzset();
     while(true)
     {
-        vTaskDelay(20/portTICK_PERIOD_MS);
-        /*for(int x = 0; x < 170; x+=10)
-        {
-            for(int j = 0; j < 320 - 16; j+=10)
-            {
-                item.setIntNum(i, TFT_PINK+i);
-                item.setXY(x,j);
-                i++;
-                vTaskDelay(100/portTICK_PERIOD_MS);
-            }
-        }*/
+        time(&now);
+        localtime_r(&now, &timeinfo);
+        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+        timerText.setText(strftime_buf, strlen(strftime_buf)+1, TFT_BLACK);
+        vTaskDelay(1000/portTICK_PERIOD_MS);
     }
 }
 #endif

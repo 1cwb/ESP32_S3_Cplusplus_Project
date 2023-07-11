@@ -38,7 +38,6 @@ struct stUIKeyEvent
     bool blongPress;
     uint32_t timerNum;
     bool brelease;
-    bool bdoubleClick;
 };
 
 enum EMUITYPE
@@ -52,10 +51,10 @@ enum EMUITYPE
 class MUiBase
 {
 public:
-    using MUiButtonPressCb = std::function<void(MEventID, MUIKeyID, bool, bool, uint32_t, bool)>;
+    using MUiButtonPressCb = std::function<void(MEventID, MUIKeyID, bool, uint32_t, bool)>;
 
     MUiBase(uint16_t x, uint16_t y, uint16_t width, uint16_t height, bool autoRegisterIncore = true, bool canbeFocus = true)
-    :x_(x),y_(y),width_(width),height_(height),bfocused_(false),binited_(false),bCanfocus_(canbeFocus),bupgradeBack_(false),autoRegisterIncore_(autoRegisterIncore),cb_(new MUiButtonPressCb),mid_(id++){}
+    :x_(x),y_(y),width_(width),height_(height),focusColor_(TFT_RED),bfocused_(false),binited_(false),bCanfocus_(canbeFocus),bupgradeBack_(false),autoRegisterIncore_(autoRegisterIncore),cb_(new MUiButtonPressCb),mid_(id++){}
     virtual ~MUiBase() 
     {
         binited_ = false;
@@ -90,11 +89,12 @@ public:
     //virtual uint32_t getUiDataLen() const = 0;
     virtual void updateData() = 0;
     virtual void onFocus() = 0;
-    void pressDown(MEventID id, MUIKeyID key, bool blongPress, bool bdoubleClick, uint32_t timerNum, bool brelease)
+    virtual void drawFocus() = 0;
+    void pressDown(MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease)
     {
         if(cb_ && *cb_)
         {
-            (*cb_)(id, key, blongPress, bdoubleClick, timerNum, brelease);
+            (*cb_)(id, key, blongPress, timerNum, brelease);
         }
     }
     void registerOnPressDown(const MUiButtonPressCb& cb)
@@ -115,6 +115,10 @@ public:
     {
         return type_;
     }
+    void setFocusColor(uint16_t color)
+    {
+        focusColor_ = color;
+    }
 protected:
     void setType(EMUITYPE type)
     {
@@ -125,6 +129,7 @@ protected:
     uint16_t y_;
     uint16_t width_;
     uint16_t height_;
+    uint16_t focusColor_;
     bool bfocused_;
     bool binited_;
     bool bCanfocus_;

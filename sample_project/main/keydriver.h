@@ -87,7 +87,7 @@ private:
         if(eventId & E_EVENT_ID_BUTTON)
         {
             stButtonInfo* btinfo = reinterpret_cast<stButtonInfo*>(data);
-            MUicore::getInstance()->updateUiNotify(getKeyEvent(btinfo->gpioNum), btinfo->blongPress, btinfo->bdoubleClick, btinfo->timer, btinfo->bbuttonRelease);
+            MUicore::getInstance()->updateUiNotify(getKeyEvent(btinfo->gpioNum), btinfo->blongPress, btinfo->timer, btinfo->bbuttonRelease);
         }
     }
 private:

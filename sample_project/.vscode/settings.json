@@ -68,6 +68,8 @@
     "stop_token": "cpp",
     "streambuf": "cpp",
     "cinttypes": "cpp",
-    "typeinfo": "cpp"
+    "typeinfo": "cpp",
+    "complex": "cpp",
+    "netfwd": "cpp"
   }
 }
