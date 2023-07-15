@@ -60,6 +60,10 @@ public:
         uint16_t colorTemp = (color >> 8) | (color << 8);
         uint32_t len = dataLen_/windown_->getPixelBytes();
         uint16_t* dataTemp = reinterpret_cast<uint16_t*> (data_);
+        for(uint32_t i = 0; i < len; i++)
+        {
+            dataTemp[i] = backColor_;
+        }
         if(bhori)
         {
             val =  (val*width_ /100);
