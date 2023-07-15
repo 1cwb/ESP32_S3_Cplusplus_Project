@@ -583,6 +583,7 @@ extern "C" void app_main(void)
 #include "keydriver.h"
 #include "mrgbcolor.h"
 #include "muiprogress.h"
+#include "muiwindown.h"
 
 using namespace std;
 
@@ -593,17 +594,15 @@ extern "C" void app_main(void)
     ledStrip.setRGBAndUpdate(RGB_COLOR_BLACK);
     LcdDriver lcd;
     MUicore::getInstance()->addLcd(&lcd); 
-    MUicore::getInstance()->setBackGround(TFT_YELLOW);
-    MUicore::getInstance()->updateUiNotify(nullptr);
-    MUiItem item(10,10,120,30);
+
+    MUIWindown window1;
+    window1.setBackGround(TFT_YELLOW);
+    window1.show(true);
+    MUiItem item(&window1, 10,10,120,30);
     item.setBackGround(TFT_GREEN);
     item.setText("item1",TFT_RED);
-    item.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
-        ledStrip.setRGBAndUpdate(RGB_COLOR_RED);
-        printf("key press\n");
-    });
     
-        MUiItem item1(10,44,120,30);
+        MUiItem item1(&window1,10,44,120,30);
     item1.setBackGround(TFT_GREEN);
     item1.setText("item2",TFT_RED);
         item1.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
@@ -611,7 +610,7 @@ extern "C" void app_main(void)
         printf("key pres1s\n");
     });
 
-        MUiItem item2(10,78,120,30);
+        MUiItem item2(&window1,10,78,120,30);
     item2.setBackGround(TFT_GREEN);
     item2.setText("item3",TFT_RED);
     item2.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
@@ -619,13 +618,38 @@ extern "C" void app_main(void)
         printf("key pre2ss\n");
     });
 
-        MUiItem item3(10,110,120,30);
+        MUiItem item3(&window1,10,110,120,30);
     item3.setBackGround(TFT_GREEN);
     item3.setText("item4",TFT_RED);
 
-    MUiText timerText(10,144,true,true);
-    timerText.setText("TextTest", strlen("TextTest")+1, TFT_BLACK);
-    MUIProgress progressBar(0,200,20,120);
+    MUiText timerText(&window1, 10,144,true,true);
+    timerText.setText("TextTest", strlen("TextTest")+1, TFT_RED);
+    MUIProgress progressBar(&window1, 0,200,20,120);
+
+
+    MUIWindown window2;
+    window2.setBackGround(TFT_PINK);
+
+    MUiItem itemx2(&window2,10,110,120,30);
+    itemx2.setBackGround(TFT_GREEN);
+    itemx2.setText("item4",TFT_RED);
+    itemx2.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
+        if(brelease)
+        {
+            ledStrip.setRGBAndUpdate(RGB_COLOR_BLACK);
+            window1.show(true);
+            window2.show(false);
+        }
+    });
+
+    item.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
+        if(brelease)
+        {
+            ledStrip.setRGBAndUpdate(RGB_COLOR_RED);
+            window1.show(false);
+            window2.show(true);
+        }
+    });
 
     MButton buttonBoot(GPIO_NUM_0);
     MButton buttonUP(GPIO_NUM_1);
@@ -646,6 +670,7 @@ extern "C" void app_main(void)
     key.keyUp = buttonUP.getPinNum();
     key.keyDown = buttonDown.getPinNum();
     keyDriver::getInstance()->remappingKey(&key);
+    
     time_t now;
     char strftime_buf[64];
     memset(strftime_buf,0,sizeof(strftime_buf));

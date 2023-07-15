@@ -4,6 +4,7 @@
 
 enum MEventID
 {
+    E_UI_EVNET_ID_WINDOWN_UPDATE,
     E_UI_EVNET_ID_UPDATE,
     E_UI_EVENT_ID_KEY_PRESSDOWN,
     E_UI_EVENT_ID_MAX
@@ -47,7 +48,34 @@ enum EMUITYPE
     E_UI_TYPE_ITEM,
     E_UI_TYPE_MAX
 };
+enum FocusSwitch
+{
+    E_UI_FOCUS_NEXT,
+    E_UI_FOCUS_FRONT,
+    E_UI_FOCUS_LEFT,
+    E_UI_FOCUS_RIGHT
+};
 
+class MUiBase;
+class MUiWindBase
+{
+public:
+    virtual ~MUiWindBase() {};
+    virtual bool bshow() const = 0;
+    virtual uint32_t getDramSize() const = 0;
+    virtual uint8_t* getDram() = 0;
+    virtual uint8_t* getDramBack() = 0;
+    virtual void resetPartRam(int32_t x, int32_t y, int32_t w, int32_t h)=0;
+    virtual uint32_t getWindownWidth() const = 0;
+    virtual uint32_t getWindownHeight() const = 0;
+    virtual void refreshFullWindown() = 0;
+    virtual void refreshPartWindown(MUiBase* ui) = 0;
+    virtual void flushFrame() = 0;
+    virtual void flusRange(uint16_t y, uint16_t height) = 0;
+    virtual MUiBase* getFocusUi() = 0;
+    virtual void switchFocus(FocusSwitch eswitch) = 0;
+private:
+};
 class MUiBase
 {
 public:
@@ -90,6 +118,7 @@ public:
     virtual void updateData() = 0;
     virtual void onFocus() = 0;
     virtual void drawFocus() = 0;
+    virtual MUiWindBase* getWindow() = 0;
     void pressDown(MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease)
     {
         if(cb_ && *cb_)

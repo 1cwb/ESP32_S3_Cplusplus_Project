@@ -1,24 +1,25 @@
 #pragma once
 #include "muicore.h"
 #include "muicommon.h"
+#include "muiwindown.h"
 
 class MUiText : public MUiBase
 {
 public:
-    MUiText(uint16_t x, uint16_t y, bool autoRegisterIncore = false, bool canbefocus = false)
-    :MUiBase(x,y,0,0,autoRegisterIncore,canbefocus),tempHeight_(0),dataLen_(0),data_(nullptr),color_(TFT_RED), backcolor_(0)
+    MUiText(MUIWindown* windown, uint16_t x, uint16_t y, bool autoRegisterIncore = false, bool canbefocus = false)
+    :MUiBase(x,y,0,0,autoRegisterIncore,canbefocus),tempHeight_(0),dataLen_(0),data_(nullptr),color_(TFT_RED), backcolor_(0), windown_(windown)
     {
         memset(data_, 0, dataLen_);
         if(autoRegisterIncore_)
         {
-            MUicore::getInstance()->addToUiCore(this);
+            windown_->addSubUi(this);
         }
     }
     ~MUiText()
     {
         if(autoRegisterIncore_)
         {
-            MUicore::getInstance()->removeFromUiCore(this);
+            windown_->removeSubUi(this);
         }
         if(data_)
         {
@@ -57,11 +58,11 @@ public:
         }
         if(backcolor_ != 0)
         {
-            MUicore::getInstance()->drawString(x_, y_, reinterpret_cast<const char*>(data_), color_, backcolor_, &height_);
+            windown_->drawString(x_, y_, reinterpret_cast<const char*>(data_), color_, backcolor_, &height_);
         }
         else
         {
-            MUicore::getInstance()->drawString(x_, y_, reinterpret_cast<const char*>(data_), color_, &height_);
+            windown_->drawString(x_, y_, reinterpret_cast<const char*>(data_), color_, &height_);
         }
         if(tempHeight_ <= height_)
         {
@@ -83,9 +84,13 @@ public:
         if(binited_ && bCanfocus_ && bfocused_)
         {
             //printf("draw focus x = %u, y = %u, width = %lu height = %u\n",x_,y_,MUicore::getInstance()->getPanelWidth(),height_);
-            MUicore::getInstance()->drawLine(0, y_, MUicore::getInstance()->getPanelWidth(), 2, focusColor_);
-            MUicore::getInstance()->drawLine(0, y_ + height_ - 2, MUicore::getInstance()->getPanelWidth(), 2, focusColor_);
+            windown_->drawLine(0, y_, MUicore::getInstance()->getPanelWidth(), 2, focusColor_);
+            windown_->drawLine(0, y_ + height_ - 2, MUicore::getInstance()->getPanelWidth(), 2, focusColor_);
         }
+    }
+    virtual MUiWindBase* getWindow()
+    {
+        return windown_;
     }
     void setText(const char* text, uint32_t userlen, uint16_t color, uint16_t backcolor = TFT_BLACK)
     {
@@ -104,7 +109,7 @@ public:
         binited_ = true;
         if(autoRegisterIncore_)
         {
-            MUicore::getInstance()->updateUiNotify(this);
+            windown_->updateUiNotify(this);
         }
     }
     uint16_t getBackColor() const 
@@ -134,7 +139,7 @@ public:
         if(autoRegisterIncore_)
         {
             bupgradeBack_ = true;
-            MUicore::getInstance()->updateUiNotify(this);
+            windown_->updateUiNotify(this);
         }
     }
 private:
@@ -143,4 +148,5 @@ private:
     uint8_t* data_;
     uint16_t color_;
     uint16_t backcolor_;
+    MUIWindown* windown_;
 };

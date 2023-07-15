@@ -2,12 +2,13 @@
 #include "muicore.h"
 #include "muicommon.h"
 #include "muiItem.h"
+#include "muiwindown.h"
 
 class MUIProgress
 {
 public:
-    MUIProgress(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t minLimit = 0, uint32_t maxLimit = 100)
-    : progeress_(new MUiItem(x,y,width,height,true,false)),percentVal_(0),minLimit_(minLimit),maxLimit_(maxLimit),progressColor_(TFT_BLUE),bhor_(width > height ? true : false)
+    MUIProgress(MUIWindown* window, uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t minLimit = 0, uint32_t maxLimit = 100)
+    : progeress_(new MUiItem(window, x,y,width,height,true,false)),percentVal_(0),minLimit_(minLimit),maxLimit_(maxLimit),progressColor_(TFT_BLUE),bhor_(width > height ? true : false)
     {
         resetProgress();
     }

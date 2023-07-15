@@ -3,29 +3,30 @@
 #include "muicore.h"
 #include "muicommon.h"
 #include "muitext.h"
+#include "muiwindown.h"
 
 #define GET_TEXT_MIDDLE_X(xstatr, itemWidth, str) ((xstatr)+2 + ((((itemWidth) - 4) -  MIN((strlen(str)*8), (itemWidth) - 4)) >> 1))
 #define GET_TEXT_MIDDLE_Y(ystart, itemHeight)     ((ystart) + (((itemHeight)>>1) - 8))
 class MUiItem : public MUiBase
 {
 public:
-    MUiItem(uint16_t x, uint16_t y, uint16_t width, uint16_t height, bool autoRegisterIncore = true, bool canbefocus = true)
+    MUiItem(MUIWindown* windown, uint16_t x, uint16_t y, uint16_t width, uint16_t height, bool autoRegisterIncore = true, bool canbefocus = true)
     :MUiBase(x,y,width,height,autoRegisterIncore,canbefocus),backColor_(TFT_BLACK),backPic_(nullptr),
     dataLen_(width*height*MUicore::getInstance()->getPixelBytes()),picLen_(0),data_(new uint8_t[dataLen_]),
-    ptext_(new MUiText(x,y))
+    ptext_(new MUiText(windown, x,y)),windown_(windown)
     {
         setType(E_UI_TYPE_ITEM);
         memset(data_, 0, dataLen_);
         if(autoRegisterIncore_)
         {
-            MUicore::getInstance()->addToUiCore(this);
+            windown_->addSubUi(this);
         }
     }
     ~MUiItem()
     {
         if(autoRegisterIncore_)
         {
-            MUicore::getInstance()->removeFromUiCore(this);
+            windown_->removeSubUi(this);
         }
         if(data_)
         {
@@ -41,7 +42,7 @@ public:
     void setBackGround(uint16_t color)
     {
         uint16_t colorTemp = (color >> 8) | (color << 8);
-        uint32_t len = dataLen_/MUicore::getInstance()->getPixelBytes();
+        uint32_t len = dataLen_/windown_->getPixelBytes();
         uint16_t* dataTemp = reinterpret_cast<uint16_t*> (data_);
         for(uint32_t i = 0; i < len; i++)
         {
@@ -51,13 +52,13 @@ public:
         binited_ = true;
         if(autoRegisterIncore_)
         {
-            MUicore::getInstance()->updateUiNotify(this);
+            windown_->updateUiNotify(this);
         }
     }
     void setProgress(uint16_t color, uint32_t val, bool bhori)
     {
         uint16_t colorTemp = (color >> 8) | (color << 8);
-        uint32_t len = dataLen_/MUicore::getInstance()->getPixelBytes();
+        uint32_t len = dataLen_/windown_->getPixelBytes();
         uint16_t* dataTemp = reinterpret_cast<uint16_t*> (data_);
         if(bhori)
         {
@@ -78,22 +79,15 @@ public:
             {
                 val = len;
             }
-            printf("len = %lu\n",len);
-            printf("val = %lu\n",val);
-            printf("val*width_ = %lu\n",val*width_);
             for(int32_t j = len - 1; j >= static_cast<int32_t>(len - val); j--)
             {
-                //for(int32_t i = 0; i < val; i++)
-                {
-                    //printf("j = %ld\n",j);
-                    dataTemp[j] = colorTemp;
-                }
+                dataTemp[j] = colorTemp;
             }
         }
         binited_ = true;
         if(autoRegisterIncore_)
         {
-            MUicore::getInstance()->updateUiNotify(this);
+            windown_->updateUiNotify(this);
         }
     }
     void setBackGround(const uint8_t* picture, uint32_t len)
@@ -112,7 +106,7 @@ public:
         memcpy(data_, picture ,dataLen_);
         if(autoRegisterIncore_)
         {
-            MUicore::getInstance()->updateUiNotify(this);
+            windown_->updateUiNotify(this);
         }
         //MUicore::getInstance()->drawPicture(x_,y_,width_,height_,data_,dataLen_);
         //MUicore::getInstance()->drawPicture(20, 20, 32, 32, wifiIcon, sizeof(wifiIcon));
@@ -141,7 +135,7 @@ public:
             //MUicore::getInstance()->drawLine(x_, y_, 2, height_, focusColor_);
             //MUicore::getInstance()->drawLine(x_, y_+height_-2, width_, 2, focusColor_);
             //MUicore::getInstance()->drawLine(x_+ height_-2, y_, 2, height_, focusColor_);
-            MUicore::getInstance()->drawFocus(x_, y_, width_, height_, focusColor_);
+            windown_->drawFocus(x_, y_, width_, height_, focusColor_);
         }
     }
     void setText(const char* text, uint16_t color, uint16_t backcolor = TFT_BLACK)
@@ -152,7 +146,7 @@ public:
             ptext_->setText(text, (width_ - 4)>>3, color, backcolor);
             if(autoRegisterIncore_)
             {
-                MUicore::getInstance()->updateUiNotify(this);
+                windown_->updateUiNotify(this);
             }
         }
     }
@@ -167,17 +161,21 @@ public:
             setText(buff, color, backcolor);
             if(autoRegisterIncore_)
             {
-                MUicore::getInstance()->updateUiNotify(this);
+                windown_->updateUiNotify(this);
             }
         }
     }
     virtual void updateData()
     {
-        MUicore::getInstance()->setRamData(x_, y_, width_, height_, data_, dataLen_);
+        windown_->setRamData(x_, y_, width_, height_, data_, dataLen_);
         if(ptext_)
         {
             ptext_->updateData();
         }
+    }
+    virtual MUiWindBase* getWindow()
+    {
+        return windown_;
     }
     void setXY(uint16_t x, uint16_t y)
     {
@@ -194,7 +192,7 @@ public:
         if(autoRegisterIncore_)
         {
             bupgradeBack_ = true;
-            MUicore::getInstance()->updateUiNotify(this);
+            windown_->updateUiNotify(this);
         }
 
     }
@@ -205,4 +203,5 @@ private:
     uint32_t picLen_;
     uint8_t* data_;
     MUiText* ptext_;
+    MUIWindown* windown_;
 };
