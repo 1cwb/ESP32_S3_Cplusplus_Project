@@ -589,68 +589,73 @@ using namespace std;
 
 extern "C" void app_main(void)
 {
-    LedStrip ledStrip;
-    ledStrip.init();
-    ledStrip.setRGBAndUpdate(RGB_COLOR_BLACK);
-    LcdDriver lcd;
-    MUicore::getInstance()->addLcd(&lcd); 
-
-    MUIWindown window1;
-    window1.setBackGround(TFT_YELLOW);
-    window1.show(true);
-    MUiItem item(&window1, 10,10,120,30);
-    item.setBackGround(TFT_GREEN);
-    item.setText("item1",TFT_RED);
+    LedStrip* ledStrip = new LedStrip;
+    ledStrip->init();
+    ledStrip->setRGBAndUpdate(RGB_COLOR_BLACK);
+    LcdDriver* lcd = new LcdDriver;
+    MUicore::getInstance()->addLcd(lcd); 
     
-        MUiItem item1(&window1,10,44,120,30);
+    MUIWindown* window1 = new MUIWindown;
+    window1->setBackGround(TFT_YELLOW);
+    window1->show(true);
+    MUiItem* item = new MUiItem(window1, 10,10,120,30);
+    item->setBackGround(TFT_GREEN);
+    
+        MUiItem item1(window1,10,44,120,30);
     item1.setBackGround(TFT_GREEN);
     item1.setText("item2",TFT_RED);
         item1.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
-        ledStrip.setRGBAndUpdate(RGB_COLOR_YELLOW);
-        printf("key pres1s\n");
+            if(brelease)
+            {
+                printf("set rgb yellow---\n");
+                ledStrip->setRGBAndUpdate(RGB_COLOR_YELLOW);
+            }
     });
 
-        MUiItem item2(&window1,10,78,120,30);
+        MUiItem item2(window1,10,78,120,30);
     item2.setBackGround(TFT_GREEN);
     item2.setText("item3",TFT_RED);
     item2.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
-        ledStrip.setRGBAndUpdate(RGB_COLOR_GREEN);
-        printf("key pre2ss\n");
+            if(brelease)
+            {
+                printf("set rgb OFF---\n");
+                ledStrip->setRGBAndUpdate(RGB_COLOR_BLACK);
+            }
     });
 
-        MUiItem item3(&window1,10,110,120,30);
+        MUiItem item3(window1,10,110,120,30);
     item3.setBackGround(TFT_GREEN);
     item3.setText("item4",TFT_RED);
 
-    MUiText timerText(&window1, 10,144,true,true);
+    MUiText timerText(window1, 10,144,true,true);
     timerText.setText("TextTest", strlen("TextTest")+1, TFT_RED);
-    MUIProgress progressBar(&window1, 0,200,20,120);
+    MUIProgress progressBar(window1, 0,200,20,120);
 
 
-    MUIWindown window2;
-    window2.setBackGround(TFT_PINK);
+    MUIWindown* window2 = new MUIWindown;
+    window2->setBackGround(TFT_PINK);
 
-    MUiItem itemx2(&window2,10,110,120,30);
+    MUiItem itemx2(window2,10,110,120,30);
     itemx2.setBackGround(TFT_GREEN);
     itemx2.setText("item4",TFT_RED);
     itemx2.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
         if(brelease)
         {
-            ledStrip.setRGBAndUpdate(RGB_COLOR_BLACK);
-            window1.show(true);
-            window2.show(false);
+            ledStrip->setRGBAndUpdate(RGB_COLOR_BLACK);
+            window1->show(true);
+            window2->show(false);
         }
     });
 
-    item.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
+    item->registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
         if(brelease)
         {
-            ledStrip.setRGBAndUpdate(RGB_COLOR_RED);
-            window1.show(false);
-            window2.show(true);
+            ledStrip->setRGBAndUpdate(RGB_COLOR_WHITE);
+            window1->show(false);
+            window2->show(true);
         }
     });
-
+    
     MButton buttonBoot(GPIO_NUM_0);
     MButton buttonUP(GPIO_NUM_1);
     MButton buttonDown(GPIO_NUM_2);
@@ -659,6 +664,7 @@ extern "C" void app_main(void)
     MButton buttonRight(GPIO_NUM_5);
     MButton buttonSet(GPIO_NUM_7);
     MButton buttonReset(GPIO_NUM_8);
+    
     //btinfo->blongPress, btinfo->bdoubleClick, btinfo->bbuttonRelease ,btinfo->timer
     buttonReset.registerEventCb([&](uint32_t pin, bool blongPress, bool brelease, uint32_t holdtimer){
         static int32_t i = 0;
@@ -680,11 +686,14 @@ extern "C" void app_main(void)
     tzset();
     while(true)
     {
-        time(&now);
+       /* time(&now);
         localtime_r(&now, &timeinfo);
         strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-        timerText.setText(strftime_buf, strlen(strftime_buf)+1, TFT_BLACK);
+        timerText.setText(strftime_buf, strlen(strftime_buf)+1, TFT_BLACK);*/
         vTaskDelay(1000/portTICK_PERIOD_MS);
+        //ledStrip->setRGBAndUpdate(RGB_COLOR_RED);
+        vTaskDelay(1000/portTICK_PERIOD_MS);
+        //ledStrip->setRGBAndUpdate(RGB_COLOR_BLACK);
     }
 }
 #endif

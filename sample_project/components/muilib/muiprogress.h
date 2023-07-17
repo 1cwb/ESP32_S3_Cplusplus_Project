@@ -34,7 +34,7 @@ public:
         {
             return;
         }
-        percentVal_ = 100*val/(maxLimit_ - minLimit_);
+        percentVal_ = 100*(val - minLimit_)/(maxLimit_ - minLimit_);
         char buff[6] = {0};
         snprintf(buff,6,"%ld%%",percentVal_);
         progeress_->setText(buff,TFT_RED);
