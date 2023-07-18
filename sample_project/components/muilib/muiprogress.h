@@ -11,6 +11,7 @@ public:
     : progeress_(new MUiItem(window, x,y,width,height,true,false)),percentVal_(0),minLimit_(minLimit),maxLimit_(maxLimit),progressColor_(TFT_BLUE),bhor_(width > height ? true : false)
     {
         resetProgress();
+        progeress_->setType(E_UI_TYPE_PROGRESSBAR);
     }
     ~MUIProgress()
     {

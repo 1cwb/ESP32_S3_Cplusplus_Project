@@ -459,8 +459,16 @@ public:
             {
                 if(it->bInited())
                 {
-                    resetPartRam(0, ui->getY(), getWindownWidth(), getWindownHeight());
-                    ui->updateData();
+                    if(it->getType() == E_UI_TYPE_TEXT)
+                    {
+                        resetPartRam(0, ui->getY(), getWindownWidth(), getWindownHeight());
+                        ui->updateData();
+                    }
+                    else
+                    {
+                        resetPartRam(ui->getX(), ui->getY(), ui->getWidth(), ui->getHeight());
+                        ui->updateData();
+                    }
                 }
             }
             if(it->bInited())

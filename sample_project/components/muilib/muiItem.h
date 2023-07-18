@@ -21,6 +21,7 @@ public:
         {
             windown_->addSubUi(this);
         }
+        setType(E_UI_TYPE_ITEM);
     }
     ~MUiItem()
     {

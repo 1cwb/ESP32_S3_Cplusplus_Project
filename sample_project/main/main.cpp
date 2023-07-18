@@ -599,7 +599,8 @@ extern "C" void app_main(void)
     window1->setBackGround(TFT_YELLOW);
     window1->show(true);
     MUiItem* item = new MUiItem(window1, 10,10,120,30);
-    item->setBackGround(TFT_GREEN);
+    item->setText("item1",TFT_RED);
+    item->setBackGround(TFT_WHITE);
     
         MUiItem item1(window1,10,44,120,30);
     item1.setBackGround(TFT_GREEN);
@@ -631,7 +632,7 @@ extern "C" void app_main(void)
     timerText.setText("TextTest", strlen("TextTest")+1, TFT_RED);
     MUIProgress progressBar(window1, 0,200,20,120);
 
-
+    MUIProgress progressBar1(window1, 22,200,120,20);
     MUIWindown* window2 = new MUIWindown;
     window2->setBackGround(TFT_PINK);
 
@@ -657,19 +658,27 @@ extern "C" void app_main(void)
     });
     
     MButton buttonBoot(GPIO_NUM_0);
-    MButton buttonUP(GPIO_NUM_1);
-    MButton buttonDown(GPIO_NUM_2);
-    MButton buttonMID(GPIO_NUM_6);
-    MButton buttonLeft(GPIO_NUM_4);
-    MButton buttonRight(GPIO_NUM_5);
-    MButton buttonSet(GPIO_NUM_7);
-    MButton buttonReset(GPIO_NUM_8);
+    MButton buttonUP(GPIO_NUM_15);
+    MButton buttonDown(GPIO_NUM_16);
+    MButton buttonMID(GPIO_NUM_17);
+    MButton buttonLeft(GPIO_NUM_18);
+    MButton buttonRight(GPIO_NUM_20);
+    MButton buttonSet(GPIO_NUM_21);
+    MButton buttonReset(GPIO_NUM_48);
     
     //btinfo->blongPress, btinfo->bdoubleClick, btinfo->bbuttonRelease ,btinfo->timer
-    buttonReset.registerEventCb([&](uint32_t pin, bool blongPress, bool brelease, uint32_t holdtimer){
-        static int32_t i = 0;
+    int32_t count = 0;
+    buttonSet.registerEventCb([&](uint32_t pin, bool blongPress, bool brelease, uint32_t holdtimer){
+        count++;
         printf("button %lu prees, blongPress(%d),brelease(%d)holdtimer(%lu)\n", pin, blongPress,brelease,holdtimer);
-        progressBar.setVal(i++);
+        progressBar.setVal(count);
+        progressBar1.setVal(count);
+    });
+    buttonReset.registerEventCb([&](uint32_t pin, bool blongPress, bool brelease, uint32_t holdtimer){
+        count--;
+        printf("button %lu prees, blongPress(%d),brelease(%d)holdtimer(%lu)\n", pin, blongPress,brelease,holdtimer);
+        progressBar.setVal(count);
+        progressBar1.setVal(count);
     });
     stKeyVal key;
     key.keyEnter = buttonMID.getPinNum();
@@ -686,14 +695,11 @@ extern "C" void app_main(void)
     tzset();
     while(true)
     {
-       /* time(&now);
+        time(&now);
         localtime_r(&now, &timeinfo);
         strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-        timerText.setText(strftime_buf, strlen(strftime_buf)+1, TFT_BLACK);*/
+        timerText.setText(strftime_buf, strlen(strftime_buf)+1, TFT_BLACK);
         vTaskDelay(1000/portTICK_PERIOD_MS);
-        //ledStrip->setRGBAndUpdate(RGB_COLOR_RED);
-        vTaskDelay(1000/portTICK_PERIOD_MS);
-        //ledStrip->setRGBAndUpdate(RGB_COLOR_BLACK);
     }
 }
 #endif

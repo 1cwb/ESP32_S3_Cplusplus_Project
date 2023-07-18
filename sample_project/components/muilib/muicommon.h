@@ -46,6 +46,7 @@ enum EMUITYPE
     E_UI_TYPE_INVALID,
     E_UI_TYPE_TEXT,
     E_UI_TYPE_ITEM,
+    E_UI_TYPE_PROGRESSBAR,
     E_UI_TYPE_MAX
 };
 enum FocusSwitch
@@ -82,7 +83,7 @@ public:
     using MUiButtonPressCb = std::function<void(MEventID, MUIKeyID, bool, uint32_t, bool)>;
 
     MUiBase(uint16_t x, uint16_t y, uint16_t width, uint16_t height, bool autoRegisterIncore = true, bool canbeFocus = true)
-    :x_(x),y_(y),width_(width),height_(height),focusColor_(TFT_RED),bfocused_(false),binited_(false),bCanfocus_(canbeFocus),bupgradeBack_(false),autoRegisterIncore_(autoRegisterIncore),cb_(new MUiButtonPressCb),mid_(id++){}
+    :x_(x),y_(y),width_(width),height_(height),focusColor_(TFT_RED),bfocused_(false),binited_(false),bCanfocus_(canbeFocus),bupgradeBack_(false),autoRegisterIncore_(autoRegisterIncore),cb_(new MUiButtonPressCb),type_(E_UI_TYPE_INVALID),mid_(id++){}
     virtual ~MUiBase() 
     {
         binited_ = false;
@@ -140,7 +141,7 @@ public:
             *cb_ = MUiButtonPressCb();
         }
     }
-    EMUITYPE getType()
+    EMUITYPE getType() const
     {
         return type_;
     }
@@ -148,7 +149,6 @@ public:
     {
         focusColor_ = color;
     }
-protected:
     void setType(EMUITYPE type)
     {
         type_ = type;

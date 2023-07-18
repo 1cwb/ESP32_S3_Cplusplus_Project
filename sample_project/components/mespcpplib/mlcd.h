@@ -61,17 +61,17 @@
 #define TFT_SKYBLUE                                 0x867D      /* 135, 206, 235 */
 #define TFT_VIOLET                                  0x915C      /* 180,  46, 226 */
 
-#define LCD_HOST                                    SPI2_HOST
+#define LCD_HOST                                    SPI3_HOST
 #define DMA_CHAN                                    LCD_HOST
 
-#define PIN_NUM_MISO                                4
-#define PIN_NUM_MOSI                                35
-#define PIN_NUM_CLK                                 36
-#define PIN_NUM_CS                                  34
+#define PIN_NUM_MISO                                -1
+#define PIN_NUM_MOSI                                11//35
+#define PIN_NUM_CLK                                 12//36
+#define PIN_NUM_CS                                  10//34
 
-#define PIN_NUM_DC                                  (gpio_num_t)37
-#define PIN_NUM_RST                                 (gpio_num_t)38
-#define PIN_NUM_BCKL                                (gpio_num_t)33
+#define PIN_NUM_DC                                  (gpio_num_t)9//37
+#define PIN_NUM_RST                                 (gpio_num_t)13//38
+#define PIN_NUM_BCKL                                (gpio_num_t)46//33
 
 #define NO_OF_SAMPLES                               64          //Multisampling
 

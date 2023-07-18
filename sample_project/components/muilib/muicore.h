@@ -208,11 +208,11 @@ private:
                         {
                             
                             ui->getWindow()->refreshFullWindown();
-                            printf("update BackGround\n");
+                            //printf("update BackGround\n");
                         }
                         else
                         {
-                            printf("update range (%u,%u,%u,%u)\n",0, ui->getY(), lcd_->getWidth(), ui->getHeight());
+                            //printf("update range (%u,%u,%u,%u)\n",0, ui->getY(), lcd_->getWidth(), ui->getHeight());
                             ui->getWindow()->refreshPartWindown(ui);
                         }
                         if(!showWindow_)
