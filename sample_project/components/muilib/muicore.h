@@ -173,6 +173,7 @@ private:
             bool brefreshBackGround = false;
             while(true)
             {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 stUIEvent* event = msg_->getQueueData();
                 if(event && event->eventId == E_UI_EVNET_ID_WINDOWN_UPDATE)
                 {
