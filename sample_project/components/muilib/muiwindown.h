@@ -129,10 +129,10 @@ public:
             }
         }
     }
-    void drawString(uint16_t x, uint16_t y, const char *p, uint16_t color, uint16_t backColor, uint16_t* height)
+    void drawString(uint16_t x, uint16_t y, const char *p, uint32_t dataLen, uint16_t color, uint16_t backColor, uint16_t* height)
     {
         *height = 16;
-        while (*p != '\0') {
+        while (*p != '\0' && dataLen != 0) {
             if (x > MUicore::getInstance()->getPanelWidth() - 16) {
                 x = 0;
                 y += 16;
@@ -145,13 +145,14 @@ public:
             drawChar(x, y, *p, 0, color, backColor);
             x += 8;
             p++;
+            dataLen --;
         }
     }
 
-    void drawString(uint16_t x, uint16_t y, const char *p, uint16_t color, uint16_t* height)
+    void drawString(uint16_t x, uint16_t y, const char *p, uint32_t dataLen, uint16_t color, uint16_t* height)
     {
         *height = 16;
-        while (*p != '\0') {
+        while (*p != '\0' && dataLen != 0) {
             if (x > MUicore::getInstance()->getPanelWidth() - 16) {
                 x = 0;
                 y += 16;
@@ -164,6 +165,7 @@ public:
             drawChar(x, y, *p, 1, color, color);
             x += 8;
             p++;
+            dataLen --;
         }
     }
     void setRamData(const uint8_t* data, uint32_t len)
@@ -412,7 +414,6 @@ public:
                 break;
             }
             case E_UI_FOCUS_LEFT:
-
                 break;
             case E_UI_FOCUS_RIGHT:
 

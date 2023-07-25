@@ -579,7 +579,7 @@ extern "C" void app_main(void)
 #include "uidriver.h"
 #include "muicore.h"
 #include "muitext.h"
-#include "muiItem.h"
+#include "muiitem.h"
 #include "keydriver.h"
 #include "mrgbcolor.h"
 #include "muiprogress.h"
@@ -599,7 +599,7 @@ extern "C" void app_main(void)
     window1->setBackGround(TFT_YELLOW);
     window1->show(true);
     MUiItem* item = new MUiItem(window1, 10,10,120,30);
-    item->setText("item1",TFT_RED);
+    item->setText("item1kghhkjhkhkh",TFT_RED);
     item->setBackGround(TFT_WHITE);
     
         MUiItem item1(window1,10,44,120,30);
@@ -636,10 +636,13 @@ extern "C" void app_main(void)
     MUIWindown* window2 = new MUIWindown;
     window2->setBackGround(TFT_PINK);
 
-    MUiItem itemx2(window2,10,110,120,30);
-    itemx2.setBackGround(TFT_GREEN);
-    itemx2.setText("item4",TFT_RED);
-    itemx2.registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
+    MUiItem* wifiItem[16];
+    for(int i = 0, y = 0; i < 16; i++, y+=20)
+    {
+        wifiItem[i] = new MUiItem(MUiItem(window2, 0, y, 170, 20));
+        wifiItem[i]->setBackGround(TFT_GREEN);
+        wifiItem[i]->setText("default",TFT_RED);
+        wifiItem[i]->registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
         if(brelease)
         {
             ledStrip->setRGBAndUpdate(RGB_COLOR_BLACK);
@@ -647,6 +650,7 @@ extern "C" void app_main(void)
             window2->show(false);
         }
     });
+    }
 
     item->registerOnPressDown([&](MEventID id, MUIKeyID key, bool blongPress, uint32_t timerNum, bool brelease){
         if(brelease)
@@ -686,6 +690,59 @@ extern "C" void app_main(void)
     key.keyDown = buttonDown.getPinNum();
     keyDriver::getInstance()->remappingKey(&key);
     
+    MNvs* wifinvs = new MNvs();
+    MWifiStation* station = MWifiStation::getInstance();
+    station->registerWifiEventCb([&](esp_event_base_t eventBase, int32_t eventId, void* eventData){
+        if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_START)
+        {
+            printf("eventId == WIFI_EVENT %ld\n", eventId);
+            //wifi->setSsidAndPasswd("TSD_SW9_SS5", "12345678");
+            //wifi->connect();
+            //lcd->fillRect( 0, 16, lcd->getWidth(), 16, TFT_BLACK);
+            //lcd->drawString(0,16,"connect TSD_SW9_SS5",TFT_RED);
+        }
+        if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_SCAN_DONE)
+        {
+            wifi_ap_record_t* apInfo = nullptr;
+            uint16_t apNum = 0;
+
+            station->wifiScanGetApRecords(&apInfo);
+            station->wifiGetScanApNum(&apNum);
+            for(int i = 0; i < apNum; i++)
+            {
+                printf("ssid: %s, rssi: %d\n",apInfo[i].ssid, apInfo[i].rssi);
+                if(i < 16)
+                {
+                    wifiItem[i]->setText(reinterpret_cast<const char*>(apInfo[i].ssid),TFT_BLACK);
+                }
+            }
+        }
+        if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_DISCONNECTED)
+        {
+            printf("connect fail\n");
+            //lcd->fillRect( 0, 16, lcd->getWidth(), 16, TFT_BLACK);
+            //lcd->drawString(0,16,"connect fail",TFT_RED);
+            //wifi->connect();
+        }
+        if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_CONNECTED)
+        {
+            printf("connect successful\n");
+            //lcd->fillRect( 0, 16, lcd->getWidth(), 16, TFT_BLACK);
+            //lcd->drawString(0,16,"connect sucess",TFT_RED);
+        }
+        if(eventBase == IP_EVENT && eventId == IP_EVENT_STA_GOT_IP)
+        {
+            uint32_t buff[8] = {0};
+            ip_event_got_ip_t* event = (ip_event_got_ip_t*) eventData;
+            snprintf(reinterpret_cast<char*>(buff), sizeof(uint32_t)*8,IPSTR, IP2STR(&event->ip_info.ip));
+            //(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+            //lcd->fillRect( 0, 32, lcd->getWidth(), 16, TFT_BLACK);
+            //lcd->drawString(0,32,reinterpret_cast<char*> (buff),TFT_RED);
+        }
+    });
+    station->init();
+    station->wifiScanStart();
+
     time_t now;
     char strftime_buf[64];
     memset(strftime_buf,0,sizeof(strftime_buf));

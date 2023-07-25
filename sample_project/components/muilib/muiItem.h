@@ -148,7 +148,7 @@ public:
         if(ptext_)
         {
             ptext_->setXY(GET_TEXT_MIDDLE_X(x_, width_, text), GET_TEXT_MIDDLE_Y(y_,height_));
-            ptext_->setText(text, (width_ - 4)>>3, color, backcolor);
+            ptext_->setText(text, ((width_ - 4)>>3)-1, color, backcolor);
             if(autoRegisterIncore_)
             {
                 windown_->updateUiNotify(this);

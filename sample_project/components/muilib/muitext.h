@@ -7,7 +7,7 @@ class MUiText : public MUiBase
 {
 public:
     MUiText(MUIWindown* windown, uint16_t x, uint16_t y, bool autoRegisterIncore = false, bool canbefocus = false)
-    :MUiBase(x,y,0,0,autoRegisterIncore,canbefocus),tempHeight_(0),dataLen_(0),data_(nullptr),color_(TFT_RED), backcolor_(0), windown_(windown)
+    :MUiBase(x,y,0,0,autoRegisterIncore,canbefocus),tempHeight_(0),dataLen_(0),showDataLen_(0),data_(nullptr),color_(TFT_RED), backcolor_(0), windown_(windown)
     {
         memset(data_, 0, dataLen_);
         if(autoRegisterIncore_)
@@ -59,11 +59,11 @@ public:
         }
         if(backcolor_ != 0)
         {
-            windown_->drawString(x_, y_, reinterpret_cast<const char*>(data_), color_, backcolor_, &height_);
+            windown_->drawString(x_, y_, reinterpret_cast<const char*>(data_), showDataLen_, color_, backcolor_, &height_);
         }
         else
         {
-            windown_->drawString(x_, y_, reinterpret_cast<const char*>(data_), color_, &height_);
+            windown_->drawString(x_, y_, reinterpret_cast<const char*>(data_), showDataLen_, color_, &height_);
         }
         if(tempHeight_ <= height_)
         {
@@ -102,9 +102,10 @@ public:
             dataLen_ = 0;
         }
         dataLen_ = strlen(text) + 1;
+        showDataLen_ = userlen;
         data_ = new uint8_t[dataLen_];
         memset(data_,0,dataLen_);
-        memcpy(data_,text,MIN(strlen(text),userlen));
+        memcpy(data_,text,dataLen_);
         color_ = color;
         backcolor_ = backcolor;
         binited_ = true;
@@ -146,6 +147,7 @@ public:
 private:
     uint32_t tempHeight_;
     uint32_t dataLen_;
+    uint32_t showDataLen_;
     uint8_t* data_;
     uint16_t color_;
     uint16_t backcolor_;
