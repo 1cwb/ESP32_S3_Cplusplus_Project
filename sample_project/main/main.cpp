@@ -591,7 +591,7 @@ extern "C" void app_main(void)
 {
     LedStrip* ledStrip = new LedStrip;
     ledStrip->init();
-    ledStrip->setRGBAndUpdate(RGB_COLOR_BLACK);
+    ledStrip->setRGBAndUpdate(RGB_COLOR_WHITE);
     LcdDriver* lcd = new LcdDriver;
     MUicore::getInstance()->addLcd(lcd); 
     
@@ -668,7 +668,7 @@ extern "C" void app_main(void)
     MButton buttonLeft(GPIO_NUM_18);
     MButton buttonRight(GPIO_NUM_20);
     MButton buttonSet(GPIO_NUM_21);
-    MButton buttonReset(GPIO_NUM_48);
+    //MButton buttonReset(GPIO_NUM_48);
     
     //btinfo->blongPress, btinfo->bdoubleClick, btinfo->bbuttonRelease ,btinfo->timer
     int32_t count = 0;
@@ -678,12 +678,12 @@ extern "C" void app_main(void)
         progressBar.setVal(count);
         progressBar1.setVal(count);
     });
-    buttonReset.registerEventCb([&](uint32_t pin, bool blongPress, bool brelease, uint32_t holdtimer){
+    /*buttonReset.registerEventCb([&](uint32_t pin, bool blongPress, bool brelease, uint32_t holdtimer){
         count--;
         printf("button %lu prees, blongPress(%d),brelease(%d)holdtimer(%lu)\n", pin, blongPress,brelease,holdtimer);
         progressBar.setVal(count);
         progressBar1.setVal(count);
-    });
+    });*/
     stKeyVal key;
     key.keyEnter = buttonMID.getPinNum();
     key.keyUp = buttonUP.getPinNum();
@@ -696,12 +696,14 @@ extern "C" void app_main(void)
         if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_START)
         {
             printf("eventId == WIFI_EVENT %ld\n", eventId);
+            station->smartConfigStart();
+            printf("smart config start %ld\n", eventId);
             //wifi->setSsidAndPasswd("TSD_SW9_SS5", "12345678");
             //wifi->connect();
             //lcd->fillRect( 0, 16, lcd->getWidth(), 16, TFT_BLACK);
             //lcd->drawString(0,16,"connect TSD_SW9_SS5",TFT_RED);
         }
-        if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_SCAN_DONE)
+        else if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_SCAN_DONE)
         {
             wifi_ap_record_t* apInfo = nullptr;
             uint16_t apNum = 0;
@@ -717,20 +719,20 @@ extern "C" void app_main(void)
                 }
             }
         }
-        if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_DISCONNECTED)
+        else if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_DISCONNECTED)
         {
             printf("connect fail\n");
             //lcd->fillRect( 0, 16, lcd->getWidth(), 16, TFT_BLACK);
             //lcd->drawString(0,16,"connect fail",TFT_RED);
             //wifi->connect();
         }
-        if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_CONNECTED)
+        else if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_CONNECTED)
         {
             printf("connect successful\n");
             //lcd->fillRect( 0, 16, lcd->getWidth(), 16, TFT_BLACK);
             //lcd->drawString(0,16,"connect sucess",TFT_RED);
         }
-        if(eventBase == IP_EVENT && eventId == IP_EVENT_STA_GOT_IP)
+        else if(eventBase == IP_EVENT && eventId == IP_EVENT_STA_GOT_IP)
         {
             uint32_t buff[8] = {0};
             ip_event_got_ip_t* event = (ip_event_got_ip_t*) eventData;
@@ -739,9 +741,22 @@ extern "C" void app_main(void)
             //lcd->fillRect( 0, 32, lcd->getWidth(), 16, TFT_BLACK);
             //lcd->drawString(0,32,reinterpret_cast<char*> (buff),TFT_RED);
         }
+        else if(eventBase == SC_EVENT && eventId == SC_EVENT_SCAN_DONE)
+        {
+            printf("smartconfig scan done\n");
+        }
+        else if(eventBase == SC_EVENT && eventId == SC_EVENT_FOUND_CHANNEL)
+        {
+            printf("smartconfig scan done\n");
+        }
+        else if(eventBase == SC_EVENT && eventId == SC_EVENT_GOT_SSID_PSWD)
+        {
+            printf("smartconfig scan done\n");
+            station->smartConfigStop();
+        }
     });
     station->init();
-    station->wifiScanStart();
+    //station->wifiScanStart();
 
     time_t now;
     char strftime_buf[64];

@@ -16,6 +16,7 @@
 #include "esp_random.h"
 #include "mevent.h"
 #include "meventhandler.h"
+#include "esp_smartconfig.h"
 class MWifiBase : public eventClient
 {
     using WifiEventNotifyCb = std::function<void(esp_event_base_t eventBase, int32_t eventId, void* eventData)>;
@@ -75,6 +76,7 @@ private:
     static MEvent::MEventHandlerCallback wifiEventHandleCb_;
     static esp_event_handler_instance_t instanceAndyId_;
     static esp_event_handler_instance_t instanceGotIp_;
+    static esp_event_handler_instance_t instanceScEvent_;
     WifiEventNotifyCb wifiEventNotifyCb_;
 };
 
@@ -131,12 +133,36 @@ public:
         }
         return true;
     }
+    bool smartConfigStart()
+    {
+        esp_err_t err = esp_smartconfig_start(&smartStartConfig_);
+        if(err != ESP_OK)
+        {
+            printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
+            return false;
+        }
+        return true;
+    }
+    bool smartConfigStop()
+    {
+        esp_err_t err = esp_smartconfig_stop();
+        if(err != ESP_OK)
+        {
+            printf("Error: %s()%d %s\n",__FUNCTION__,__LINE__,esp_err_to_name(err));
+            return false;
+        }
+        return true;
+    }
 private:
 
     MWifiStation() : staNetif_(nullptr)
     {
         apInfo_ = new wifi_ap_record_t[DEFAULT_SCAN_LIST_SIZE];
         memset(apInfo_, 0, sizeof(wifi_ap_record_t) * DEFAULT_SCAN_LIST_SIZE);
+        smartConfigType_ = SC_TYPE_ESPTOUCH;
+        ESP_ERROR_CHECK( esp_smartconfig_set_type(smartConfigType_) );
+        smartconfig_start_config_t cfg = SMARTCONFIG_START_CONFIG_DEFAULT();
+        smartStartConfig_ = cfg;
     }
     ~MWifiStation()
     {
@@ -152,6 +178,8 @@ private:
     esp_netif_t *staNetif_;
     wifi_ap_record_t* apInfo_;
     wifi_config_t config_;
+    smartconfig_type_t smartConfigType_;
+    smartconfig_start_config_t smartStartConfig_;
 };
 
 class MWifiAP : public MWifiBase

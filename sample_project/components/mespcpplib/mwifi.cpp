@@ -4,6 +4,7 @@ wifi_init_config_t MWifiBase::initCfg_;
 MEvent::MEventHandlerCallback MWifiBase::wifiEventHandleCb_ = nullptr;
 esp_event_handler_instance_t MWifiBase::instanceAndyId_ = nullptr;
 esp_event_handler_instance_t MWifiBase::instanceGotIp_ = nullptr;
+esp_event_handler_instance_t MWifiBase::instanceScEvent_ = nullptr;
 
 MWifiBase::MWifiBase()
 {
@@ -97,6 +98,11 @@ bool MWifiBase::init()
                                                         wifiEventHandleCb_,
                                                         nullptr,
                                                         &instanceGotIp_);
+    MEvent::getInstance()->registerEventHandlerInstance(SC_EVENT,
+                                                        ESP_EVENT_ANY_ID,
+                                                        wifiEventHandleCb_,
+                                                        nullptr,
+                                                        &instanceScEvent_);                                                    
     return true;
 }
 bool MWifiBase::deinit()
