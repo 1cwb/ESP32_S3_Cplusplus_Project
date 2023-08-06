@@ -69,6 +69,28 @@ bool MWifiBase::init()
             }
             memcpy(wifiEvent->eventData, event_data, sizeof(ip_event_got_ip_t));
         }
+        else if(event_base == SC_EVENT && event_id == SC_EVENT_GOT_SSID_PSWD)
+        {
+            smartconfig_event_got_ssid_pswd_t *evt = (smartconfig_event_got_ssid_pswd_t *)event_data;
+            wifi_config_t* wifiConfig = reinterpret_cast<wifi_config_t*>(malloc(sizeof(wifi_config_t)));
+            if(!wifiConfig)
+            {
+                free(wifiEvent);
+                wifiEvent = nullptr;
+                printf("Error: malloc smartconfig_event_got_ssid_pswd_t fail\n");
+                return;
+            }
+            bzero(wifiConfig, sizeof(wifi_config_t));
+            memcpy(wifiConfig->sta.ssid, evt->ssid, sizeof(wifiConfig->sta.ssid));
+            memcpy(wifiConfig->sta.password, evt->password, sizeof(wifiConfig->sta.password));
+            wifiConfig->sta.bssid_set = evt->bssid_set;
+            if (wifiConfig->sta.bssid_set == true)
+            {
+                memcpy(wifiConfig->sta.bssid, evt->bssid, sizeof(wifiConfig->sta.bssid));
+            }
+
+            wifiEvent->eventData =  reinterpret_cast<wifi_config_t*>(wifiConfig);
+        }
         msg.eventId = E_EVENT_ID_ESP_WIFI;
         msg.data = reinterpret_cast<uint8_t*>(wifiEvent);
         msg.dataLen = sizeof(stMeventInfo);
@@ -110,6 +132,7 @@ bool MWifiBase::deinit()
     esp_err_t err = ESP_OK;
     MEvent::getInstance()->unregisterEventHandlerInstance(WIFI_EVENT, ESP_EVENT_ANY_ID, wifiEventHandleCb_);
     MEvent::getInstance()->unregisterEventHandlerInstance(IP_EVENT, IP_EVENT_STA_GOT_IP, wifiEventHandleCb_);
+    MEvent::getInstance()->unregisterEventHandlerInstance(SC_EVENT, ESP_EVENT_ANY_ID, wifiEventHandleCb_);
     if(initStatus_ & ESP_WIFI_NETIF_INIT_SUCCESS)
     {
         err = esp_netif_deinit();

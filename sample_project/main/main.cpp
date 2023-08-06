@@ -721,10 +721,9 @@ extern "C" void app_main(void)
         }
         else if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_DISCONNECTED)
         {
-            printf("connect fail\n");
             //lcd->fillRect( 0, 16, lcd->getWidth(), 16, TFT_BLACK);
             //lcd->drawString(0,16,"connect fail",TFT_RED);
-            //wifi->connect();
+            station->connect();
         }
         else if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_CONNECTED)
         {
@@ -743,17 +742,37 @@ extern "C" void app_main(void)
         }
         else if(eventBase == SC_EVENT && eventId == SC_EVENT_SCAN_DONE)
         {
-            printf("smartconfig scan done\n");
+            printf("1 smartconfig scan done\n");
         }
         else if(eventBase == SC_EVENT && eventId == SC_EVENT_FOUND_CHANNEL)
         {
-            printf("smartconfig scan done\n");
+            printf("2 smartconfig find channel\n");
         }
         else if(eventBase == SC_EVENT && eventId == SC_EVENT_GOT_SSID_PSWD)
         {
-            printf("smartconfig scan done\n");
+            printf("3 smartconfig getpasswd\n");
+        wifi_config_t* wifi_config = (wifi_config_t*)eventData;
+
+        uint8_t ssid[33] = { 0 };
+        uint8_t password[65] = { 0 };
+        memcpy(ssid, wifi_config->sta.ssid, sizeof(wifi_config->sta.ssid));
+        memcpy(password, wifi_config->sta.password, sizeof(wifi_config->sta.password));
+        printf( "SSID:%s\n", ssid);
+        printf( "PASSWORD:%s\n", password);
+
+        //ESP_ERROR_CHECK( esp_wifi_disconnect() );
+        //ESP_ERROR_CHECK( esp_wifi_set_config(WIFI_IF_STA, wifi_config) );
+        //esp_wifi_connect();
+        station->disconnect();
+        station->setSsidAndPasswd(reinterpret_cast<const char*> (ssid), reinterpret_cast<const char*>(password));
+        station->connect();
+        }
+        else if(eventBase == SC_EVENT && eventId == SC_EVENT_SEND_ACK_DONE)
+        {
+            printf("smart configstop\n");
             station->smartConfigStop();
         }
+
     });
     station->init();
     //station->wifiScanStart();

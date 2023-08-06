@@ -162,7 +162,7 @@ private:
         smartConfigType_ = SC_TYPE_ESPTOUCH;
         ESP_ERROR_CHECK( esp_smartconfig_set_type(smartConfigType_) );
         smartconfig_start_config_t cfg = SMARTCONFIG_START_CONFIG_DEFAULT();
-        smartStartConfig_ = cfg;
+        memcpy(&smartStartConfig_, &cfg, sizeof(smartconfig_start_config_t));
     }
     ~MWifiStation()
     {
