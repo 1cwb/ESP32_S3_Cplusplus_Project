@@ -563,7 +563,7 @@ extern "C" void app_main(void)
 }
 #endif
 
-#if 1
+#if 0
 #include <thread>
 #include "mledstrip.h"
 #include "mrgbcolor.h"
@@ -576,6 +576,8 @@ extern "C" void app_main(void)
 #include "mrocker.h"
 #include "mnvs.h"
 #include "mesptimer.h"
+#include "mi2c.h"
+#include "muart.h"
 #include "uidriver.h"
 #include "muicore.h"
 #include "muitext.h"
@@ -784,6 +786,8 @@ extern "C" void app_main(void)
     // 将时区设置为中国标准时间
     setenv("TZ", "CST-8", 1);
     tzset();
+    MUart uart;
+    MI2CMaster i2cmaster(2, 0);
     while(true)
     {
         time(&now);
@@ -791,6 +795,173 @@ extern "C" void app_main(void)
         strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
         timerText.setText(strftime_buf, strlen(strftime_buf)+1, TFT_BLACK);
         vTaskDelay(1000/portTICK_PERIOD_MS);
+    }
+}
+#endif
+
+#if 1
+#include <thread>
+#include "mledstrip.h"
+#include "mrgbcolor.h"
+#include "mledstrip.h"
+#include "meventhandler.h"
+#include "mespnow.h"
+#include <iostream>
+#include "mbutton.h"
+#include "mespcmd.h"
+#include "mrocker.h"
+#include "mnvs.h"
+#include "mesptimer.h"
+#include "mi2c.h"
+#include "muart.h"
+#include "uidriver.h"
+#include "muicore.h"
+#include "muitext.h"
+#include "muiitem.h"
+#include "keydriver.h"
+#include "mrgbcolor.h"
+#include "muiprogress.h"
+#include "muiwindown.h"
+
+using namespace std;
+
+extern "C" void app_main(void)
+{
+    LedStrip* ledStrip = new LedStrip;
+    ledStrip->init();
+    ledStrip->setRGBAndUpdate(RGB_COLOR_WHITE);
+
+    MButton buttonBoot(GPIO_NUM_0);
+    MButton buttonUP(GPIO_NUM_15);
+    MButton buttonDown(GPIO_NUM_16);
+    MButton buttonMID(GPIO_NUM_17);
+    MButton buttonLeft(GPIO_NUM_18);
+    MButton buttonRight(GPIO_NUM_20);
+    MButton buttonSet(GPIO_NUM_21);
+
+    
+    MNvs* wifinvs = new MNvs();
+    MWifiStation* station = MWifiStation::getInstance();
+    station->registerWifiEventCb([&](esp_event_base_t eventBase, int32_t eventId, void* eventData){
+        if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_START)
+        {
+            printf("eventId == WIFI_EVENT %ld\n", eventId);
+            station->smartConfigStart();
+            printf("smart config start %ld\n", eventId);
+            //wifi->setSsidAndPasswd("TSD_SW9_SS5", "12345678");
+            //wifi->connect();
+            //lcd->fillRect( 0, 16, lcd->getWidth(), 16, TFT_BLACK);
+            //lcd->drawString(0,16,"connect TSD_SW9_SS5",TFT_RED);
+        }
+        else if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_SCAN_DONE)
+        {
+            wifi_ap_record_t* apInfo = nullptr;
+            uint16_t apNum = 0;
+
+            station->wifiScanGetApRecords(&apInfo);
+            station->wifiGetScanApNum(&apNum);
+            for(int i = 0; i < apNum; i++)
+            {
+                printf("ssid: %s, rssi: %d\n",apInfo[i].ssid, apInfo[i].rssi);
+            }
+        }
+        else if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_DISCONNECTED)
+        {
+            //lcd->fillRect( 0, 16, lcd->getWidth(), 16, TFT_BLACK);
+            //lcd->drawString(0,16,"connect fail",TFT_RED);
+            station->connect();
+        }
+        else if(eventBase == WIFI_EVENT && eventId == WIFI_EVENT_STA_CONNECTED)
+        {
+            printf("connect successful\n");
+            //lcd->fillRect( 0, 16, lcd->getWidth(), 16, TFT_BLACK);
+            //lcd->drawString(0,16,"connect sucess",TFT_RED);
+        }
+        else if(eventBase == IP_EVENT && eventId == IP_EVENT_STA_GOT_IP)
+        {
+            uint32_t buff[8] = {0};
+            ip_event_got_ip_t* event = (ip_event_got_ip_t*) eventData;
+            snprintf(reinterpret_cast<char*>(buff), sizeof(uint32_t)*8,IPSTR, IP2STR(&event->ip_info.ip));
+            //(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+            //lcd->fillRect( 0, 32, lcd->getWidth(), 16, TFT_BLACK);
+            //lcd->drawString(0,32,reinterpret_cast<char*> (buff),TFT_RED);
+        }
+        else if(eventBase == SC_EVENT && eventId == SC_EVENT_SCAN_DONE)
+        {
+            printf("1 smartconfig scan done\n");
+        }
+        else if(eventBase == SC_EVENT && eventId == SC_EVENT_FOUND_CHANNEL)
+        {
+            printf("2 smartconfig find channel\n");
+        }
+        else if(eventBase == SC_EVENT && eventId == SC_EVENT_GOT_SSID_PSWD)
+        {
+            printf("3 smartconfig getpasswd\n");
+        wifi_config_t* wifi_config = (wifi_config_t*)eventData;
+
+        uint8_t ssid[33] = { 0 };
+        uint8_t password[65] = { 0 };
+        memcpy(ssid, wifi_config->sta.ssid, sizeof(wifi_config->sta.ssid));
+        memcpy(password, wifi_config->sta.password, sizeof(wifi_config->sta.password));
+        printf( "SSID:%s\n", ssid);
+        printf( "PASSWORD:%s\n", password);
+
+        //ESP_ERROR_CHECK( esp_wifi_disconnect() );
+        //ESP_ERROR_CHECK( esp_wifi_set_config(WIFI_IF_STA, wifi_config) );
+        //esp_wifi_connect();
+        station->disconnect();
+        station->setSsidAndPasswd(reinterpret_cast<const char*> (ssid), reinterpret_cast<const char*>(password));
+        station->connect();
+        }
+        else if(eventBase == SC_EVENT && eventId == SC_EVENT_SEND_ACK_DONE)
+        {
+            printf("smart configstop\n");
+            station->smartConfigStop();
+        }
+
+    });
+    station->init();
+    //station->wifiScanStart();
+
+    time_t now;
+    char strftime_buf[64];
+    memset(strftime_buf,0,sizeof(strftime_buf));
+    struct tm timeinfo;
+    // 将时区设置为中国标准时间
+    setenv("TZ", "CST-8", 1);
+    tzset();
+    MUart uart;
+    uart.init(4,5);
+    char* buff = new char[512];
+    uart.registerEventCallback([&](uart_event_t* ev){
+        if(ev->type == UART_DATA)
+        {
+            memset(buff, 0, 512);
+            int len = uart.recvData(buff,511,20/portTICK_PERIOD_MS);
+            if(len)
+            {
+                buff[len] = '\0';
+                printf("recv: %s\n",buff);
+            }
+        }
+        if(ev->type == UART_PATTERN_DET)
+        {
+            int pos = uart.patternGetPos();
+            printf("pos = %d\n",pos);
+            pos = uart.patternPopPos();
+            printf("pos = %d\n",pos);
+        }
+    });
+    uart.enablePatternDetBaudIntr('+',3,0,0,0);
+    MI2CMaster i2cmaster(2, 0);
+    while(true)
+    {
+        time(&now);
+        localtime_r(&now, &timeinfo);
+        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+        //uart.sendData(strftime_buf,64);
+        //uart_write_bytes(2, (const char *) strftime_buf, 63);
+        vTaskDelay(10/portTICK_PERIOD_MS);
     }
 }
 #endif
